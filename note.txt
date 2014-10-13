@@ -34,3 +34,36 @@ ph->p_pa field records the load address of each section in kernel ELF object. Bo
 ->Examine the full list of the names, sizes, and link addresses of all the sections in the kernel executable by typing:
 i386-jos-elf-objdump -h obj/kern/kernel
 
+Exercise 7
+Use QEMU and GDB to trace into the JOS kernel and stop at the movl %eax, %cr0. Examine memory at 0x00100000 and at 0xf0100000. Now, single step over that instruction using the stepi GDB command. Again, examine memory at 0x00100000 and at 0xf0100000. Make sure you understand what just happened.
+Ans: After the instruction (movl %eax, %cr0), the memory addresses between 0x00100000 and 0xf0100000 are mapped with exact contents in memory 0x00100000 and 0xf0100000. The page mapping works. In that way, kernel code is loaded in both address windows.
+Before:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+After:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0xf0100010:     0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+
+Without the instruction, the memory mapping is not enabled. The first instruction that failed is 0x10002a:    jmp    *%eax, in which case %eax = 0xf010002c. Since the address is not valid, that's why the jmp failed.
+Before:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+After:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
