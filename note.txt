@@ -67,3 +67,30 @@ After:
 (gdb) x/8x 0xf0100000
 0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
 0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+
+Exercise 8-3
+For the following questions you might wish to consult the notes for Lecture 2. These notes cover GCC's calling convention on the x86.
+Trace the execution of the following code step-by-step:
+int x = 1, y = 3, z = 4;
+cprintf("x %d, y %x, z %d\n", x, y, z);
+In the call to cprintf(), to what does fmt point? To what does ap point?
+List (in order of execution) each call to cons_putc, va_arg, and vcprintf. For cons_putc, list its argument as well. For va_arg, list what ap points to before and after the call. For vcprintf list the values of its two arguments.
+Ans: In the call to cprintf, fmt points to the immediate 0xf0101852. ap points to the pointer to first argument: 0x1, whose addr/val is 0xf0115fc4.
+In vcprintf, value of fmt is 0xf0101852, and value of ap is 0xf0115fc4.
+cprintf(fmt, ...) -> vcprintf(fmt, ap) -> vprintfmt((void*)putch, &cnt, fmt, ap)
+Skip rest of questions since I am already faimiliar with x86 call convention.
+
+Exercise 8-4 // TODO: need some effort to loop through all the code to decide
+Run the following code.
+    unsigned int i = 0x00646c72;
+    cprintf("H%x Wo%s", 57616, &i);
+What is the output? Explain how this output is arrived at in the step-by-step manner of the previous exercise. Here's an ASCII table that maps bytes to characters.
+The output depends on that fact that the x86 is little-endian. If the x86 were instead big-endian what would you set i to in order to yield the same output? Would you need to change 57616 to a different value?
+Ans: Big Endian - Least Significant Byte stored in Highest address; Little Endian - Least Significant Byte stored at Lowest address.
+
+Exercise 8-5
+In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?
+    cprintf("x=%d y=%d", 3);
+Ans: y could be any value on the stack. This happens because vprintfmt will finally locate a value according to y by moving the dereferencing $ebp ptr up from the position of value x.
+
+

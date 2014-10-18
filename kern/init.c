@@ -3,6 +3,7 @@
 #include <inc/stdio.h>
 #include <inc/string.h>
 #include <inc/assert.h>
+#include <inc/colors.h>
 
 #include <kern/monitor.h>
 #include <kern/console.h>
@@ -34,6 +35,17 @@ i386_init(void)
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
+
+	// Exercise 8-3
+	int x = 1, y = 3, z = 4;
+	cprintf(GRN_FG "x %d, y %x, z %d\n" RST, x, y, z);
+
+	// Exercise 8-4
+    unsigned int i = 0x00646c72;
+    cprintf(YEL_FG "H%x Wo%s\n" RST, 57616, &i);	
+
+	// Exercise 8-5
+	cprintf(CYN_FG "x=%d y=%d\n" RST, 3);
 
 	// Test the stack backtrace function (lab 1 only)
 	test_backtrace(5);

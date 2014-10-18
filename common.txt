@@ -1,0 +1,18 @@
+===================================
+Entry Addresses for basic functions
+===================================
+
+cprintf entry
+f01008bd
+f01008be
+
+vcprintf entry
+0xf0100897
+0xf0100898
+
+vprintfmt entry
+0xf0100cdf
+0xf0100ce0
+->continue point
+f0100d00
+
