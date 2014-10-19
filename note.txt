@@ -93,4 +93,9 @@ In the following code, what is going to be printed after 'y='? (note: the answer
     cprintf("x=%d y=%d", 3);
 Ans: y could be any value on the stack. This happens because vprintfmt will finally locate a value according to y by moving the dereferencing $ebp ptr up from the position of value x.
 
+Exercise 10. 
+To become familiar with the C calling conventions on the x86, find the address of the test_backtrace function in obj/kern/kernel.asm, set a breakpoint there, and examine what happens each time it gets called after the kernel starts. How many 32-bit words does each recursive nesting level of test_backtrace push on the stack, and what are those words?
+Ans: 1-> $ebp(base ptr), 2->$ebx(callee saved), 3->$ebx(contains counter), 4->fmt str(for cprintf), 5->ret addr(when calling cprintf), 6->$eax(arg before calling test_backtrace)
+In each recursion level, you will see $ebp(item 1), $ebx(item 2) along with $eax(item 6) pushed in stack
+
 

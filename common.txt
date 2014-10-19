@@ -2,6 +2,13 @@
 Entry Addresses for basic functions
 ===================================
 
+bootloader entry
+0x7c00
+
+kernel entry
+physical addr: 0x10000c
+vritual addr:  0xf010000c
+
 cprintf entry
 f01008bd
 f01008be
@@ -16,3 +23,5 @@ vprintfmt entry
 ->continue point
 f0100d00
 
+test_backtrace entry
+0xf0100104
