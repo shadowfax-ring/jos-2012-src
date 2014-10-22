@@ -77,11 +77,12 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 		debuginfo_eip(eip, &eipinfo);
 		cprintf("%s:%d: ", eipinfo.eip_file, eipinfo.eip_line);
-		int32_t j = 0;
-		while (j < eipinfo.eip_fn_namelen) {
-			cprintf("%c", eipinfo.eip_fn_name[j]);
-			j++;
-		}
+		cprintf("%.*s", eipinfo.eip_fn_namelen, eipinfo.eip_fn_name);
+//		int32_t j = 0;
+//		while (j < eipinfo.eip_fn_namelen) {
+//			cprintf("%c", eipinfo.eip_fn_name[j]);
+//			j++;
+//		}
 		cprintf("+%d", eip - eipinfo.eip_fn_addr);
 		cprintf("\n");
 
