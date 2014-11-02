@@ -1,0 +1,7 @@
+PartI - Physical Page Management
+In this part, mainly implemented physical page management code/functions. 
+Allocated a PageInfo array to keep track of all available physical pages.
+Each entry of PageInfo array maps to a physical page.
+Moreover, implemented a page free list to keep track of free physical memory 
+pages.
+Guess: at this step, everything is done in memory-mapped kernel stack

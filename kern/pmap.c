@@ -167,8 +167,8 @@ mem_init(void)
 	page_init();
 
 	check_page_free_list(1);
-	//check_page_alloc();
-	//check_page();
+	check_page_alloc();
+	check_page();
 
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory
@@ -288,8 +288,15 @@ page_init(void)
 struct PageInfo *
 page_alloc(int alloc_flags)
 {
-	// Fill this function in
-	return 0;
+	if (!page_free_list) {	// OOM
+		return NULL;
+	}
+	struct PageInfo *page = page_free_list;
+	page_free_list = page_free_list->pp_link;
+	if (alloc_flags & ALLOC_ZERO) {
+		memset(page2kva(page), 0, PGSIZE);
+	}
+	return page;
 }
 
 //
@@ -299,7 +306,9 @@ page_alloc(int alloc_flags)
 void
 page_free(struct PageInfo *pp)
 {
-	// Fill this function in
+	assert(pp && pp->pp_ref == 0);
+	pp->pp_link = page_free_list;
+	page_free_list = pp;	
 }
 
 //
@@ -525,6 +534,8 @@ check_page_alloc(void)
 	char *c;
 	int i;
 
+	cprintf(MAG_FG "===Check page alloc: START===\n");
+
 	if (!pages)
 		panic("'pages' is a null pointer!");
 
@@ -587,7 +598,7 @@ check_page_alloc(void)
 		--nfree;
 	assert(nfree == 0);
 
-	cprintf("check_page_alloc() succeeded!\n");
+	cprintf(MAG_FG "===Check page alloc: PASS===\n" RST);
 }
 
 //
