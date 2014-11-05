@@ -110,8 +110,8 @@ boot_alloc(uint32_t n)
 	if (PADDR(nextfree) > npages * PGSIZE) {
 		return NULL;
 	}
+	cprintf("result = %p\n", result);
 	cprintf(RST);
-
 	return result;
 }
 
@@ -347,8 +347,28 @@ page_decref(struct PageInfo* pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	return NULL;
+	pde_t *pde;
+	pte_t *pte, *pgtab;
+	struct PageInfo *pginfo;
+
+	pde = &pgdir[PDX(va)];
+	if (*pde & PTE_P) {
+		pgtab = (pte_t *) KADDR(PGNUM(pde));
+	}
+	else {
+		if (!create || !(pginfo = page_alloc(1))) {
+			return NULL;
+		}
+		else {
+			// convert to PA
+			*pde = page2pa(pginfo) | PTE_P | PTE_W | PTE_U;
+			// convert to kernel VA
+			pgtab = page2kva(pginfo);
+		}
+	}
+
+	pte = &pgtab[PTX(va)];
+	return pte;
 }
 
 //
@@ -364,7 +384,23 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+	pte_t *pte;
+	char *a = (char *) PGROUNDDOWN(va);
+	char *end = (char *) PGROUNDDOWN(va+size-1);	
+
+	while (1) {
+		if ((pte = pgdir_walk(kern_pgdir, a, 1)) == NULL) {
+			return;
+		}
+		if (*pte & PTE_P) {	// already mapped
+			return;
+		}
+		*pte = pa | PTE_P | perm;
+
+		if (a == end) break;
+		a += PGSIZE;
+		pa += PGSIZE;
+	}
 }
 
 //
