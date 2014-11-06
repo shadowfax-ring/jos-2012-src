@@ -353,7 +353,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 
 	pde = &pgdir[PDX(va)];
 	if (*pde & PTE_P) {
-		pgtab = (pte_t *) KADDR(PGNUM(pde));
+		pgtab = (pte_t *) KADDR(PTE_ADDR(*pde));
 	}
 	else {
 		if (!create || !(pginfo = page_alloc(1))) {
@@ -393,7 +393,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 			return;
 		}
 		if (*pte & PTE_P) {	// already mapped
-			return;
+			panic("Remapping of page: %p\n", pte);
 		}
 		*pte = pa | PTE_P | perm;
 
@@ -431,7 +431,24 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// Fill this function in
+	pte_t *pte;
+
+	pte = pgdir_walk(pgdir, va, 0);
+	if (pte) {
+		if (*pte & PTE_P) {
+			page_remove(pgdir, va);
+			tlb_invalidate(pgdir, va);
+		}
+	}
+	else {
+		pte = pgdir_walk(pgdir, va, 1);
+		if (!pte) {
+			return -E_NO_MEM;
+		}
+	}
+	*pte = page2pa(pp) | PTE_P | perm;
+	pp->pp_ref++;
+
 	return 0;
 }
 
@@ -449,8 +466,18 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	// Fill this function in
-	return NULL;
+	struct PageInfo *pginfo;
+	pte_t *pte = pgdir_walk(pgdir, va, 0);
+	if (!pte) {
+		return NULL;
+	}
+
+	if (pte_store) {
+		*pte_store = pte;
+	}
+
+	pginfo = pa2page(PTE_ADDR(*pte));
+	return pginfo;
 }
 
 //
@@ -471,7 +498,15 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+	struct PageInfo *pginfo;
+	pte_t *pte;
+	pte_t **pte_store = &pte;
+	pginfo = page_lookup(pgdir, va, pte_store);
+	if (pginfo) {
+		page_decref(pginfo);
+		*(*pte_store) = 0; // need exception handling
+		tlb_invalidate(pgdir, va);
+	}
 }
 
 //
@@ -719,6 +754,8 @@ check_page(void)
 	int i;
 	extern pde_t entry_pgdir[];
 
+	cprintf(MAG_FG "===Check page: START===\n");
+
 	// should be able to allocate three pages
 	pp0 = pp1 = pp2 = 0;
 	assert((pp0 = page_alloc(0)));
@@ -853,7 +890,8 @@ check_page(void)
 	page_free(pp1);
 	page_free(pp2);
 
-	cprintf("check_page() succeeded!\n");
+	//cprintf("check_page() succeeded!\n");
+	cprintf(MAG_FG "===Check page: PASS===\n" RST);
 }
 
 // check page_insert, page_remove, &c, with an installed kern_pgdir
