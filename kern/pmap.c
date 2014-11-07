@@ -364,6 +364,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 			*pde = page2pa(pginfo) | PTE_P | PTE_W | PTE_U;
 			// convert to kernel VA
 			pgtab = page2kva(pginfo);
+			pginfo->pp_ref++;
 		}
 	}
 
@@ -438,6 +439,10 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 		if (*pte & PTE_P) {
 			page_remove(pgdir, va);
 			tlb_invalidate(pgdir, va);
+		}
+		// corner-case: same pp reinserted at same va
+        if (page_free_list == pp) {
+            page_free_list = page_free_list->pp_link;
 		}
 	}
 	else {
@@ -766,6 +771,9 @@ check_page(void)
 	assert(pp1 && pp1 != pp0);
 	assert(pp2 && pp2 != pp1 && pp2 != pp0);
 
+	cprintf("page_free_list: %p\n", page_free_list);
+	cprintf("pp0: %p, pp1: %p, pp2: %p\n", pp0, pp1, pp2);
+
 	// temporarily steal the rest of the free pages
 	fl = page_free_list;
 	page_free_list = 0;
@@ -781,7 +789,11 @@ check_page(void)
 
 	// free pp0 and try again: pp0 should be used for page table
 	page_free(pp0);
+	cprintf("pp0->pp_ref=%d\n", pp0->pp_ref);
+	cprintf("pp1->pp_ref=%d\n", pp1->pp_ref);
 	assert(page_insert(kern_pgdir, pp1, 0x0, PTE_W) == 0);
+	cprintf("pp0->pp_ref=%d\n", pp0->pp_ref);
+	cprintf("pp1->pp_ref=%d\n", pp1->pp_ref);
 	assert(PTE_ADDR(kern_pgdir[0]) == page2pa(pp0));
 	assert(check_va2pa(kern_pgdir, 0x0) == page2pa(pp1));
 	assert(pp1->pp_ref == 1);
@@ -796,9 +808,11 @@ check_page(void)
 	assert(!page_alloc(0));
 
 	// should be able to map pp2 at PGSIZE because it's already there
+	cprintf("checkpoint\n");
 	assert(page_insert(kern_pgdir, pp2, (void*) PGSIZE, PTE_W) == 0);
 	assert(check_va2pa(kern_pgdir, PGSIZE) == page2pa(pp2));
 	assert(pp2->pp_ref == 1);
+	cprintf("checkpoint\n");
 
 	// pp2 should NOT be on the free list
 	// could happen in ref counts are handled sloppily in page_insert
