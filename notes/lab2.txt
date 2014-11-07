@@ -5,3 +5,67 @@ Each entry of PageInfo array maps to a physical page.
 Moreover, implemented a page free list to keep track of free physical memory 
 pages.
 Guess: at this step, everything is done in memory-mapped kernel stack
+
+PartII - Virtual Memory
+boot_alloc(n) - allocate pages of specified memory n, and returns next free page
+mem_init() - setup two-level page table
+1) kern_pgdir as 4K page directory
+2) pages array to track all phsycial pages by struct PageInfo
+page_init() - init pages array to setup page_free_list
+page_alloc() - allocate one physical page by returning a page from page_free_list
+page_free() - free a physical page by adding it back to page_free_list
+page_decref() - decrement the ref count on a page, free it if no more refs
+pgdir_walk() - return a pointer to PTE for linear address va
+1) if create is false, do nothing if PDE not exists
+2) if create is true, allocate a new page table page, update the PDE, increment the ref count for new allocated PageInfo
+boot_map_region - Map [va, va+size) to [pa, pa+size), only intended to setup static mappings
+above UTOP, does not change pp_ref for mapped pages -> initialized PTEs
+page_insert() - Map physical page 'pp' at virtual address 'va'
+page_lookup() - return PageInfo at address 'va'
+page_remove() - Remove/Decrement ref count of a 'pp' mapped with 'va'
+tlb_invalidate() - invalidated a TLB entry
+
+Virtual Memory Address Space (per process)
+From top to bottom
+
+0xffffffff			Top of memory				TOP_OF_MEMORY
+......(32MB)
+0xfe000000			Device memory				DEVICE_MEMORY
+......(224MB)
+0xf0000000			Kernel Base					KERNBASE/KSTACKTOP
+......(32KB/8*PGSIZE)
+0xefff8000			CPU0's Kernel Stack			CPU0_KSTACK
+......(32KB/8*PGSIZE)
+0xefff0000			CPU0's Kernel Stack Gap		CPU0_KSTACK_GAP/INVALID
+......32KB/8*PGSIZE
+0xeffe8000			CPU1's Kernel Stack			CPU1_KSTACK
+......(32KB/8*PGSIZE)
+0xeffe0000			CPU1's Kernel Stack Gap		CPU_KSTACK_GAP/INVALID
+......(4MB from KERNBASE)
+0xefc00000			Memory Mapped IO Limit		MMIOLIM
+......(4MB)
+0xef800000			Memory Mapped IO Base		ULIM/MMIOBASE
+......(4MB)
+0xef400000			Current Page Table			UVPT
+......(4MB)
+0xef000000			Read-Only Pages				UPAGES
+......(4MB)
+0xeec00000			Read-Only ENVS				UTOP/UENVS/UXSTACKTOP
+......(4KB)
+0xeebff000			Empty Memory
+......(4KB)
+0xeebfe000			Top of User Stack			USTACKTOP
+......(4KB)
+0xeebfd000			Normal User Stack			USTACKBASE
+......
+0x00800000			Begin of Program Data & Heap
+......(4KB)
+0x007ff000			Temporary Mapping for User Page-Fault/Empty
+......(4092KB)
+0x00400000			Temporary Mappings			UTEMP/Empty
+......(2MB)
+0x00200000			User Level Stabs Data		USTABDATA/Empty
+......(2MB)
+0x00000000			Start of Virtual Memory		Empty
+
+
