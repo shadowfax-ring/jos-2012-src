@@ -13,6 +13,7 @@
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
+extern pde_t *kern_pgdir;
 
 struct Command {
 	const char *name;
@@ -100,25 +101,38 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 int
 mon_showmappings(int argc, char **argv, struct Trapframe *tf)
 {
-	int i;
-	char start[8], end[8];
+	uintptr_t l_addr, r_addr, a;
 
 	cprintf("Show mappings:\n");
-	memset(start, 0, sizeof(start));
-	memset(end, 0, sizeof(end));
 	if (argc < 2 || argc > 3) {
 		showmappings_usage();
 		return 1;
 	}
 
-	strcpy(start, argv[1]);
+	l_addr = strtol(argv[1], NULL, 16);
 	if (argc == 2) {
-		strcpy(end, argv[1]);
+		r_addr = strtol(argv[1], NULL, 16);
 	}
 	else {
-		strcpy(end, argv[2]);
+		r_addr = strtol(argv[2], NULL, 16);
 	}
-	cprintf("%s - %s\n", start, end);
+	if (l_addr > r_addr) {
+		return -1;
+	}
+
+	l_addr = ROUNDDOWN(l_addr, PGSIZE);
+	r_addr = ROUNDDOWN(r_addr, PGSIZE);
+	cprintf("%p - %p\n", l_addr, r_addr);
+
+	a = l_addr;
+	while (a <= r_addr) {
+		int pdx = PDX(a);
+		pde_t pde = kern_pgdir[pdx];
+		cprintf("PDE entry: %p\n", pde);
+		int ptx = PTX(a);
+
+		a += PGSIZE;
+	}
 
 	return 0;
 }
