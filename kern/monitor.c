@@ -25,8 +25,13 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Print backtrace of current function", mon_backtrace },
+	{ "showmappings", 
+	  "Display PA => VA mappings in currently active address space", 
+	  mon_showmappings },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
+
+static void showmappings_usage();
 
 /***** Implementations of basic kernel monitor commands *****/
 
@@ -92,6 +97,37 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int
+mon_showmappings(int argc, char **argv, struct Trapframe *tf)
+{
+	int i;
+	char start[8], end[8];
+
+	cprintf("Show mappings:\n");
+	memset(start, 0, sizeof(start));
+	memset(end, 0, sizeof(end));
+	if (argc < 2 || argc > 3) {
+		showmappings_usage();
+		return 1;
+	}
+
+	strcpy(start, argv[1]);
+	if (argc == 2) {
+		strcpy(end, argv[1]);
+	}
+	else {
+		strcpy(end, argv[2]);
+	}
+	cprintf("%s - %s\n", start, end);
+
+	return 0;
+}
+
+/***** Util functions *****/
+static void showmappings_usage()
+{
+	cprintf("Usage: \n");
+}
 
 
 /***** Kernel monitor command interpreter *****/
@@ -154,3 +190,4 @@ monitor(struct Trapframe *tf)
 				break;
 	}
 }
+

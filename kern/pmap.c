@@ -113,9 +113,9 @@ boot_alloc(uint32_t n)
 	if (PADDR(nextfree) > npages * PGSIZE) {
 		return NULL;
 	}
-//#ifdef DEBUG_JOS
+#ifdef DEBUG_JOS
 	cprintf("boot_alloc: result = %p\n", result);
-//#endif
+#endif
 	return result;
 }
 
@@ -152,7 +152,7 @@ mem_init(void)
 	// following line.)
 
 	// Permissions: kernel R, user R
-	cprintf("pgdir idx: UVPT = %d\n", PDX(UVPT));
+	//cprintf("pgdir idx: UVPT = %d\n", PDX(UVPT));
 	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
 
 	//////////////////////////////////////////////////////////////////////
@@ -162,7 +162,7 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.
 	// Your code goes here:
 	pages = (struct PageInfo *) boot_alloc(npages * sizeof(struct PageInfo)); 
-	cprintf(MAG_FG "==================\n" RST);
+	//cprintf(MAG_FG "==================\n" RST);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -176,7 +176,7 @@ mem_init(void)
 	check_page_alloc();
 	check_page();
 
-	print_free_pages();
+	//print_free_pages();
 
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory
@@ -189,8 +189,8 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Map 'pages' array to places where user level program have privilege 
 	// to access
-	cprintf("UPAGES: pdx = %d ptx = %d, pa pages = %p\n", 
-			PDX(UPAGES), PTX(UPAGES), PADDR(pages));
+	//cprintf("UPAGES: pdx = %d ptx = %d, pa pages = %p\n", 
+	//		PDX(UPAGES), PTX(UPAGES), PADDR(pages));
 	boot_map_region(kern_pgdir, UPAGES, npages * sizeof(struct PageInfo), 
 					PADDR(pages), PTE_U | PTE_P);
 	
@@ -205,7 +205,7 @@ mem_init(void)
 	//       the kernel overflows its stack, it will fault rather than
 	//       overwrite memory.  Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
-	cprintf("pgdir idx: KSTACK = %d\n", PDX(KSTACKTOP-KSTKSIZE));
+	//cprintf("pgdir idx: KSTACK = %d\n", PDX(KSTACKTOP-KSTKSIZE));
 	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, 
 					PADDR(bootstack), PTE_W | PTE_P);
 
@@ -219,7 +219,7 @@ mem_init(void)
 	boot_map_region(kern_pgdir, KERNBASE, KERNBASE_RSV_SIZE,
 					0, PTE_W | PTE_P);
 
-	print_mappings();
+	//print_mappings();
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -345,7 +345,7 @@ page_alloc(int alloc_flags)
 	if (alloc_flags & ALLOC_ZERO) {
 		memset(page2kva(page), 0, PGSIZE);
 	}
-	cprintf(MAG_FG "Free page = %p\n" RST, page2pa(page));
+	//cprintf(MAG_FG "Free page = %p\n" RST, page2pa(page));
 	return page;
 }
 
