@@ -10,10 +10,10 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
+#include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
-extern pde_t *kern_pgdir;
 
 struct Command {
 	const char *name;
@@ -27,7 +27,8 @@ static struct Command commands[] = {
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Print backtrace of current function", mon_backtrace },
 	{ "showmappings", 
-	  "Display PA => VA mappings in currently active address space", 
+	  "Display PA => VA mappings in currently active address space "
+	  "at page boundary", 
 	  mon_showmappings },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
@@ -101,7 +102,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 int
 mon_showmappings(int argc, char **argv, struct Trapframe *tf)
 {
-	uintptr_t l_addr, r_addr, a;
+	uintptr_t l_addr, r_addr, va;
 
 	cprintf("Show mappings:\n");
 	if (argc < 2 || argc > 3) {
@@ -110,13 +111,14 @@ mon_showmappings(int argc, char **argv, struct Trapframe *tf)
 	}
 
 	l_addr = strtol(argv[1], NULL, 16);
-	if (argc == 2) {
+	if (argc == 2) {	// one page
 		r_addr = strtol(argv[1], NULL, 16);
 	}
 	else {
 		r_addr = strtol(argv[2], NULL, 16);
 	}
 	if (l_addr > r_addr) {
+		cprintf("Address range not valid: %p - %p\n", l_addr, r_addr);
 		return -1;
 	}
 
@@ -124,14 +126,26 @@ mon_showmappings(int argc, char **argv, struct Trapframe *tf)
 	r_addr = ROUNDDOWN(r_addr, PGSIZE);
 	cprintf("%p - %p\n", l_addr, r_addr);
 
-	a = l_addr;
-	while (a <= r_addr) {
-		int pdx = PDX(a);
-		pde_t pde = kern_pgdir[pdx];
-		cprintf("PDE entry: %p\n", pde);
-		int ptx = PTX(a);
+	va = l_addr;
+	while (va <= r_addr) {
+		int pdx = PDX(va);
+		int ptx = PTX(va);
 
-		a += PGSIZE;
+		cprintf("va: %p  ", va);
+		pde_t pde = kern_pgdir[pdx];
+		if (pde & PTE_P) {
+			cprintf("PDE: %p  ", pde);
+			pte_t *pgtab = (uintptr_t *) KADDR(PTE_ADDR(pde));
+			pte_t pte = pgtab[ptx];
+			if (pte & PTE_P) {
+				cprintf("PTE: %p  ", pte);
+				physaddr_t pa = PTE_ADDR(pte);
+				uint32_t perm = PGOFF(pte);
+				cprintf("pa: %p  perm: %b", pa, perm);
+			}
+		}
+		cprintf("\n");
+		va += PGSIZE;
 	}
 
 	return 0;
@@ -140,7 +154,8 @@ mon_showmappings(int argc, char **argv, struct Trapframe *tf)
 /***** Util functions *****/
 static void showmappings_usage()
 {
-	cprintf("Usage: \n");
+	cprintf("Usage: showmappings a1 a2\n");
+	cprintf("    specify address range\n");
 }
 
 

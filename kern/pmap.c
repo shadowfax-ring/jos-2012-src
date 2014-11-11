@@ -152,7 +152,9 @@ mem_init(void)
 	// following line.)
 
 	// Permissions: kernel R, user R
-	//cprintf("pgdir idx: UVPT = %d\n", PDX(UVPT));
+#ifdef DEBUG_JOS
+	cprintf("pgdir idx: UVPT = %d\n", PDX(UVPT));
+#endif
 	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
 
 	//////////////////////////////////////////////////////////////////////
@@ -162,7 +164,6 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.
 	// Your code goes here:
 	pages = (struct PageInfo *) boot_alloc(npages * sizeof(struct PageInfo)); 
-	//cprintf(MAG_FG "==================\n" RST);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -189,8 +190,10 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Map 'pages' array to places where user level program have privilege 
 	// to access
-	//cprintf("UPAGES: pdx = %d ptx = %d, pa pages = %p\n", 
-	//		PDX(UPAGES), PTX(UPAGES), PADDR(pages));
+#ifdef DEBUG_JOS
+	cprintf(MAG_FG "UPAGES: va = %p pdx = %d ptx = %d, pa = %p\n" RST, 
+			UPAGES, PDX(UPAGES), PTX(UPAGES), PADDR(pages));
+#endif
 	boot_map_region(kern_pgdir, UPAGES, npages * sizeof(struct PageInfo), 
 					PADDR(pages), PTE_U | PTE_P);
 	
@@ -205,7 +208,11 @@ mem_init(void)
 	//       the kernel overflows its stack, it will fault rather than
 	//       overwrite memory.  Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
-	//cprintf("pgdir idx: KSTACK = %d\n", PDX(KSTACKTOP-KSTKSIZE));
+#ifdef DEBUG_JOS
+	cprintf(MAG_FG "KSTACK: va = %p pdx = %d ptx = %d\n" RST, 
+			(KSTACKTOP-KSTKSIZE), PDX(KSTACKTOP-KSTKSIZE), 
+			PDX(KSTACKTOP-KSTKSIZE));
+#endif
 	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, 
 					PADDR(bootstack), PTE_W | PTE_P);
 
@@ -216,6 +223,11 @@ mem_init(void)
 	// We might not have 2^32 - KERNBASE bytes of physical memory, but
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
+#ifdef DEBUG_JOS
+	cprintf(MAG_FG "KERNBASE: va = %p pdx = %d, ptx = %d, pa = %p\n" RST, 
+			KERNBASE, PDX(KERNBASE), PTX(KERNBASE), 
+			PADDR((void *)(KERNBASE)));
+#endif
 	boot_map_region(kern_pgdir, KERNBASE, KERNBASE_RSV_SIZE,
 					0, PTE_W | PTE_P);
 
@@ -243,7 +255,7 @@ mem_init(void)
 	lcr0(cr0);
 
 	// Some more checks, only possible after kern_pgdir is installed.
-	//check_page_installed_pgdir();
+	check_page_installed_pgdir();
 
 }
 
@@ -267,8 +279,9 @@ void print_mappings()
 		if (kern_pgdir[i] != 0) {
 			//addr = PADDR((char *) kern_pgdir[i]);
 		}
-		cprintf("Entry: %d, kva: %p, pgtab pa:%p\t",
-				i, kern_pgdir+i, kern_pgdir[i]);
+		cprintf("Entry: %d, array: %p, pde: %p, va: %p\t",
+				i, kern_pgdir+i, kern_pgdir[i], 
+				(i << 22) & 0xffc00000);
 		
 		if (i % 2 == 0) {
 			cprintf("\n");
@@ -345,7 +358,9 @@ page_alloc(int alloc_flags)
 	if (alloc_flags & ALLOC_ZERO) {
 		memset(page2kva(page), 0, PGSIZE);
 	}
-	//cprintf(MAG_FG "Free page = %p\n" RST, page2pa(page));
+#ifdef DEBUG_JOS
+	cprintf(MAG_FG "Free page = %p\n" RST, page2pa(page));
+#endif
 	return page;
 }
 

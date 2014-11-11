@@ -84,9 +84,9 @@ Part II - Kernel Address Space
 Question
 2. What entries (rows) in the page directory have been filled in at this point? What addresses do they map and where do they point? In other words, fill out this table as much as possible:
 Entry	Base Virtual Address	Points to (logically):
-1023	0xfec00000				0x3be007 (Page table for top 4MB of phys memory)
-1022	0xfe800000				0x3bf007
-1021	0xfe40000				0x3c0007
+1023	0xffc00000				0x3be007 (Page table for top 4MB of phys memory)
+1022	0xff800000				0x3bf007
+1021	0xff400000				0x3c0007
 ...
 963		0xf00c0000				0x3fa007
 962		0xf0080000				0x3fb007
@@ -116,4 +116,10 @@ Ans: less than 2^32, deduct memory allocated for page directory/page tables.
 
 6. Revisit the page table setup in kern/entry.S and kern/entrypgdir.c. Immediately after we turn on paging, EIP is still a low number (a little over 1MB). At what point do we transition to running at an EIP above KERNBASE? What makes it possible for us to continue executing at a low EIP between when we enable paging and when we begin running at an EIP above KERNBASE? Why is this transition necessary?
 
+Challenge! Extend the JOS kernel monitor with commands to:
+1. Display in a useful and easy-to-read format all of the physical page mappings (or lack thereof) that apply to a particular range of virtual/linear addresses in the currently active address space. For example, you might enter 'showmappings 0x3000 0x5000' to display the physical page mappings and corresponding permission bits that apply to the pages at virtual addresses 0x3000, 0x4000, and 0x5000.
+2. Explicitly set, clear, or change the permissions of any mapping in the current address space.
+3. Dump the contents of a range of memory given either a virtual or physical address range. Be sure the dump code behaves correctly when the range extends across page boundaries!
+4. Do anything else that you think might be useful later for debugging the kernel. (There's a good chance it will be!)
+Ans: finish basic functionality for showmappings
 
