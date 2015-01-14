@@ -1,0 +1,101 @@
+Exercise 3
+1. At what point does the processor start executing 32-bit code? What exactly causes the switch from 16-bit to 32-bit mode
+Ans: First it switches from real mode to protected mode(80286 mode) by setting 1 bit (CR0_PE_ON) in register %cr0. 
+Then it switches from protected mode to i386 by a ljmp instruction - (ljmp $PROT_MODE_CSEG, $protcseg): (ljmp $0x8,$0x7c32).
+This allows a code segment selector(%cs) to be specified with value 0x8, which refers to the code descriptor entry in GDT. That descriptor describes a 32-bit code segment, so the processor has switched to 32-bit mode.
+
+2. What is the last instruction of the boot loader executed, and what is the first instruction of the kernel it just loaded?
+Ans: The first instruction of boot loader is to set the value of data segment selector(%ds).
+Boot loader loads to physical address 0x10000 with 0x1000 bytes from kernel starting at kernel offset 0x0.
+Last instruction of the boot loader is to call the entry point of kernel. - 0x7d63: call *0x10018 (which is at address 0x0010000c)
+The first instruction of the kernel is 0x10000c:    movw   $0x1234,0x472
+
+3. Where is the first instruction of the kernel?
+The first instruction of the kernel is at physical address: 0x10000c
+
+4. How does the boot loader decide how many sectors it must read in order to fetch the entire kernel from disk? Where does it find this information?
+Ans: It finds the information from ELF header, whose address is pre-defined in physical memory.
+
+Exercise 5
+Trace through the first few instructions of the boot loader again and identify the first instruction that would "break" or otherwise do the wrong thing if you were to get the boot loader's link address wrong. Then change the link address in boot/Makefrag to something wrong, run make clean, recompile the lab with make, and trace into the boot loader again to see what happens. Don't forget to change the link address back and make clean again afterward!
+Ans: I changed the link address to several options such as 0x7c08, 0x7d00. What I find out is that the bootloader still executes from address 0x7c00 (maybe because of the mapping in physical memory from 0x7c00 to 0x7cff for boot loader). When I step thru the instruction, it finally breaks at the long jump when the boot mode switches from protected mode to 32-bit mode. As indicated in below instruction.
+[   0:7c2d] => 0x7c2d:  ljmp   $0x8,$0x7c32
+
+Exercise 6
+When BIOS enters the boot loader:
+(gdb) x/8x 0x00100000
+0x100000:       0x00000000      0x00000000      0x00000000      0x00000000
+0x100010:       0x00000000      0x00000000      0x00000000      0x00000000
+When boot loader enters the kernel:
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+The difference in contents is because kernel is loaded to memory by boot loader.
+ph->p_pa field records the load address of each section in kernel ELF object. Boot loader loads each section of kernel to its own load address.
+->Examine the full list of the names, sizes, and link addresses of all the sections in the kernel executable by typing:
+i386-jos-elf-objdump -h obj/kern/kernel
+
+Exercise 7
+Use QEMU and GDB to trace into the JOS kernel and stop at the movl %eax, %cr0. Examine memory at 0x00100000 and at 0xf0100000. Now, single step over that instruction using the stepi GDB command. Again, examine memory at 0x00100000 and at 0xf0100000. Make sure you understand what just happened.
+Ans: After the instruction (movl %eax, %cr0), the memory addresses between 0x00100000 and 0xf0100000 are mapped with exact contents in memory 0x00100000 and 0xf0100000. The page mapping works. In that way, kernel code is loaded in both address windows.
+Before:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+After:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0xf0100010:     0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+
+Without the instruction, the memory mapping is not enabled. The first instruction that failed is 0x10002a:    jmp    *%eax, in which case %eax = 0xf010002c. Since the address is not valid, that's why the jmp failed.
+Before:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+After:
+(gdb) x/8x 0x00100000
+0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
+0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
+(gdb) x/8x 0xf0100000
+0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
+
+Exercise 8-3
+For the following questions you might wish to consult the notes for Lecture 2. These notes cover GCC's calling convention on the x86.
+Trace the execution of the following code step-by-step:
+int x = 1, y = 3, z = 4;
+cprintf("x %d, y %x, z %d\n", x, y, z);
+In the call to cprintf(), to what does fmt point? To what does ap point?
+List (in order of execution) each call to cons_putc, va_arg, and vcprintf. For cons_putc, list its argument as well. For va_arg, list what ap points to before and after the call. For vcprintf list the values of its two arguments.
+Ans: In the call to cprintf, fmt points to the immediate 0xf0101852. ap points to the pointer to first argument: 0x1, whose addr/val is 0xf0115fc4.
+In vcprintf, value of fmt is 0xf0101852, and value of ap is 0xf0115fc4.
+cprintf(fmt, ...) -> vcprintf(fmt, ap) -> vprintfmt((void*)putch, &cnt, fmt, ap)
+Skip rest of questions since I am already faimiliar with x86 call convention.
+
+Exercise 8-4 // TODO: need some effort to loop through all the code to decide
+Run the following code.
+    unsigned int i = 0x00646c72;
+    cprintf("H%x Wo%s", 57616, &i);
+What is the output? Explain how this output is arrived at in the step-by-step manner of the previous exercise. Here's an ASCII table that maps bytes to characters.
+The output depends on that fact that the x86 is little-endian. If the x86 were instead big-endian what would you set i to in order to yield the same output? Would you need to change 57616 to a different value?
+Ans: Big Endian - Least Significant Byte stored in Highest address; Little Endian - Least Significant Byte stored at Lowest address.
+
+Exercise 8-5
+In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?
+    cprintf("x=%d y=%d", 3);
+Ans: y could be any value on the stack. This happens because vprintfmt will finally locate a value according to y by moving the dereferencing $ebp ptr up from the position of value x.
+
+Exercise 10. 
+To become familiar with the C calling conventions on the x86, find the address of the test_backtrace function in obj/kern/kernel.asm, set a breakpoint there, and examine what happens each time it gets called after the kernel starts. How many 32-bit words does each recursive nesting level of test_backtrace push on the stack, and what are those words?
+Ans: 1-> $ebp(base ptr), 2->$ebx(callee saved), 3->$ebx(contains counter), 4->fmt str(for cprintf), 5->ret addr(when calling cprintf), 6->$eax(arg before calling test_backtrace)
+In each recursion level, you will see $ebp(item 1), $ebx(item 2) along with $eax(item 6) pushed in stack
+
+

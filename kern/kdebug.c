@@ -150,6 +150,8 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 
 		// Make sure the STABS and string table memory is valid.
 		// LAB 3: Your code here.
+		// Can't search for user-level addresses yet!
+  	    panic("User address");
 	}
 
 	// String table validity checks
@@ -203,8 +205,13 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	//	There's a particular stabs type used for line numbers.
 	//	Look at the STABS documentation and <inc/stab.h> to find
 	//	which one.
-	// Your code here.
-
+	stab_binsearch(stabs, &lline, &rline, N_SLINE, addr);
+	if (lline <= rline) {
+		info->eip_line = stabs[lline].n_desc;
+	}
+	else {
+		info->eip_line = -1;
+	}
 
 	// Search backwards from the line number for the relevant filename
 	// stab.

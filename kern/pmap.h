@@ -6,6 +6,8 @@
 # error "This is a JOS kernel header; user programs should not #include it"
 #endif
 
+#define DEBUG_JOSX
+
 #include <inc/memlayout.h>
 #include <inc/assert.h>
 struct Env;
