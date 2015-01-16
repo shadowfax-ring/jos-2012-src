@@ -6,6 +6,7 @@
 #include <inc/string.h>
 #include <inc/assert.h>
 #include <inc/elf.h>
+#include <inc/colors.h>
 
 #include <kern/env.h>
 #include <kern/pmap.h>
@@ -116,9 +117,19 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
+	int i;
+	struct Env *next_env = NULL;
+	for (i = NENV - 1; i >= 0; i--) {
+		envs[i].env_id = 0;
+		envs[i].env_link = next_env;
+		envs[i].env_status = ENV_FREE;
+		next_env = &envs[i];
+	}
+	env_free_list = &envs[0];
 
 	// Per-CPU part of the initialization
 	env_init_percpu();
+	cprintf(GRN_FG "Environments init started\n" RST);
 }
 
 // Load GDT and segment descriptors.

@@ -44,7 +44,7 @@ i386_init(void)
 
 	// Lab 2 memory management initialization functions
 	mem_init();
-	cprintf(GRN_FG "== Memory management initialization successful ==\n" RST);
+	cprintf(GRN_FG "Memory management initialization successful\n" RST);
 
 	// Exercise 8-3
 	//int x = 1, y = 3, z = 4;
@@ -58,7 +58,7 @@ i386_init(void)
 	//cprintf(CYN_FG "x=%d y=%d\n" RST, 3);
 
 	// Test the stack backtrace function (lab 1 only)
-	test_backtrace(5);
+	//test_backtrace(5);
 
 	// Lab 3 user environment initialization functions
 	env_init();
