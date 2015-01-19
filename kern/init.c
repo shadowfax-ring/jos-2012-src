@@ -73,6 +73,7 @@ i386_init(void)
 #endif // TEST*
 
 	// We only have one user environment for now, so just run it.
+	cprintf(GRN_FG "Run environment: user_hello\n" RST);
 	env_run(&envs[0]);
 }
 

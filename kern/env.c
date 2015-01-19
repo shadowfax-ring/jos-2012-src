@@ -129,7 +129,6 @@ env_init(void)
 
 	// Per-CPU part of the initialization
 	env_init_percpu();
-	cprintf(GRN_FG "Environments init started\n" RST);
 }
 
 // Load GDT and segment descriptors.
@@ -283,6 +282,20 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+	uintptr_t start_addr = PGROUNDDOWN((uintptr_t) va);
+	uintptr_t end_addr = PGROUNDUP((uintptr_t) va + len - 1);
+	uintptr_t cur_addr = start_addr;
+	struct PageInfo *pginfo;
+	while (cur_addr <= end_addr) {
+		if ((pginfo = page_alloc(0)) < 0) {
+			panic("Cannot allocate page table\n");
+		}
+		if (page_insert(e->env_pgdir, pginfo, (void *) cur_addr, PTE_U | PTE_W) < 0) {
+			panic("Failed to map physical page info %p to va %p\n",
+				  pginfo, cur_addr);
+		}
+		cur_addr += PGSIZE;
+	}
 }
 
 //
@@ -339,11 +352,46 @@ load_icode(struct Env *e, uint8_t *binary, size_t size)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here.
+	struct Elf *elf_binary = (struct Elf *) binary;
+	if (elf_binary->e_magic != ELF_MAGIC) {
+		cprintf(RED_FG "Not a valid ELF!\n" RST);
+		return;
+	}
+
+	// load each program segment
+	struct Proghdr *ph, *eph;
+	ph = (struct Proghdr *) (binary + elf_binary->e_phoff);
+	eph = ph + elf_binary->e_phnum;
+
+	// switch to env pgdir
+	lcr3(PADDR(e->env_pgdir));
+
+	for (; ph < eph; ph++) {
+		if (ph->p_type != ELF_PROG_LOAD) {
+			continue;
+		}
+
+		// allocate memory for each segment
+		region_alloc(e, (void *) ph->p_va, ph->p_memsz);
+
+		// load each segment to memory
+		memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
+
+		// zero out the remaining memory for each segment
+		memset((void *) (ph->p_va + ph->p_filesz), 0,
+			   ph->p_memsz - ph->p_filesz);
+	}
+
+	// switch back to kernel pgdir
+	lcr3(PADDR(kern_pgdir));
+
+	// set the entry point for the env
+	e->env_tf.tf_eip = elf_binary->e_entry;
 
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
-
 	// LAB 3: Your code here.
+	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
 }
 
 //
@@ -357,6 +405,13 @@ void
 env_create(uint8_t *binary, size_t size, enum EnvType type)
 {
 	// LAB 3: Your code here.
+	struct Env *e = NULL;
+	if (env_alloc(&e, 0) != 0) {
+		cprintf(RED_FG "Failed to allocate new environment.\n" RST);
+		return;
+	}
+	load_icode(e, binary, size);
+	e->env_type = type;
 }
 
 //
@@ -472,6 +527,16 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
+	// If this is a context switch
+	if (curenv && curenv->env_status == ENV_RUNNING) {
+		curenv->env_status = ENV_RUNNABLE;
+	}
+
+	curenv = e;
+	curenv->env_type = ENV_RUNNING;
+	curenv->env_runs++;
+	lcr3(PADDR(curenv->env_pgdir));
+	env_pop_tf(&curenv->env_tf);
 
 	panic("env_run not yet implemented");
 }

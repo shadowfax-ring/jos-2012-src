@@ -203,6 +203,7 @@ mem_init(void)
 	cprintf(MAG_FG "UPAGES: va = %p pdx = %d ptx = %d, pa = %p\n" RST, 
 			UPAGES, PDX(UPAGES), PTX(UPAGES), PADDR(pages));
 #endif
+	cprintf(MAG_FG "Map pages array\n" RST);
 	boot_map_region(kern_pgdir, UPAGES, npages * sizeof(struct PageInfo), 
 					PADDR(pages), PTE_U | PTE_P);
 	
@@ -214,6 +215,7 @@ mem_init(void)
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
+	cprintf(MAG_FG "Map envs array\n" RST);
 	boot_map_region(kern_pgdir, UENVS, NENV * sizeof(struct Env),
 					PADDR(envs), PTE_U | PTE_P);
 
@@ -232,6 +234,7 @@ mem_init(void)
 			(KSTACKTOP-KSTKSIZE), PDX(KSTACKTOP-KSTKSIZE), 
 			PDX(KSTACKTOP-KSTKSIZE));
 #endif
+	cprintf(MAG_FG "Map bootstack\n" RST);
 	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, 
 					PADDR(bootstack), PTE_W | PTE_P);
 
@@ -247,6 +250,7 @@ mem_init(void)
 			KERNBASE, PDX(KERNBASE), PTX(KERNBASE), 
 			PADDR((void *)(KERNBASE)));
 #endif
+	cprintf(MAG_FG "Map all KERNBASE virtual address space\n" RST);
 	boot_map_region(kern_pgdir, KERNBASE, KERNBASE_RSV_SIZE,
 					0, PTE_W | PTE_P);
 
@@ -469,6 +473,9 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
+	cprintf(MAG_FG "Map VA %p at PA %p with size %d\n" RST,
+			va, pa, size);
+
 	pte_t *pte;
 	char *a = (char *) PGROUNDDOWN(va);
 	char *end = (char *) PGROUNDDOWN(va+size-1);	
