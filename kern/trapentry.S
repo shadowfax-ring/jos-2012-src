@@ -41,15 +41,79 @@
 	pushl $(num);							\
 	jmp _alltraps
 
-.text
 
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
+.text
+TRAPHANDLER_NOEC(DIVIDE_ERROR, T_DIVIDE); #0
+TRAPHANDLER_NOEC(DEBUG_EXCEPTIONS, T_DEBUG); #1
+TRAPHANDLER_NOEC(NMI, T_NMI); #2
+TRAPHANDLER_NOEC(BREAKPOINT, T_BRKPT); #3
+TRAPHANDLER_NOEC(OVERFLOW, T_OFLOW); #4
+TRAPHANDLER_NOEC(BOUNDS_CHECK, T_BOUND); #5
+TRAPHANDLER_NOEC(INVALID_CODE, T_ILLOP); #6
+TRAPHANDLER_NOEC(COPROCESSOR_NOT_AVAILABLE, T_DEVICE); #7
+TRAPHANDLER_NOEC(COPROCESSOR_ERROR, T_FPERR); #16
 
+TRAPHANDLER_NOEC(COPROCESSOR_SEGMENT_OVERRUN, T_COPROC); #9 reserved
+TRAPHANDLER_NOEC(RESERVED_15, T_RES); #15 reserved
 
+TRAPHANDLER(SYSTEM_ERROR, T_DBLFLT); #8
+TRAPHANDLER(INVALID_TSS, T_TSS); #10
+TRAPHANDLER(SEGMENT_NOT_PRESENT, T_SEGNP); #11
+TRAPHANDLER(STACK_EXCEPTION, T_STACK); #12
+TRAPHANDLER(GENERAL_PROTECTION_FAULT, T_GPFLT); #13
+TRAPHANDLER(PAGE_FAULT, T_PGFLT); #14
 
 /*
  * Lab 3: Your code here for _alltraps
  */
+.globl _alltraps
+ _alltraps:
+
+/*
+ * Define the global symbols for each type of interrupt/exception
+ */
+.data
+.globl int_vectors
+int_vectors:
+	# No Error Code
+	.long DIVIDE_ERROR					#0
+	.long DEBUG_EXCEPTIONS				#1
+	.long NMI							#2
+	.long BREAKPOINT					#3
+	.long OVERFLOW						#4
+	.long BOUNDS_CHECK					#5
+	.long INVALID_CODE					#6
+	.long COPROCESSOR_NOT_AVAILABLE		#7
+	# Error Code - 0
+	.long SYSTEM_ERROR					#8
+	# No Error Code
+	.long COPROCESSOR_SEGMENT_OVERRUN	#9
+	# Error Code
+	.long INVALID_TSS					#10
+	.long SEGMENT_NOT_PRESENT			#11
+	.long STACK_EXCEPTION				#12
+	.long GENERAL_PROTECTION_FAULT		#13
+	.long PAGE_FAULT					#14
+	# No Error Code
+	.long RESERVED_15					#15
+	.long COPROCESSOR_ERROR				#16
+	# 17 - 31 (TBD)
+	.long 17
+	.long 18
+	.long 19
+	.long 20
+	.long 21
+	.long 22
+	.long 23
+	.long 24
+	.long 25
+	.long 26
+	.long 27
+	.long 28
+	.long 29
+	.long 30
+	.long 31
 
