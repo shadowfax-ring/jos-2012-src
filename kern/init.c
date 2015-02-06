@@ -44,7 +44,9 @@ i386_init(void)
 
 	// Lab 2 memory management initialization functions
 	mem_init();
+#ifdef DEBUG_JOS
 	cprintf(GRN_FG "Memory management initialization successful\n" RST);
+#endif
 
 	// Exercise 8-3
 	//int x = 1, y = 3, z = 4;
@@ -58,7 +60,7 @@ i386_init(void)
 	//cprintf(CYN_FG "x=%d y=%d\n" RST, 3);
 
 	// Test the stack backtrace function (lab 1 only)
-	//test_backtrace(5);
+	test_backtrace(5);
 
 	// Lab 3 user environment initialization functions
 	env_init();
@@ -70,12 +72,12 @@ i386_init(void)
 #else
 	// Touch all you want.
 	//ENV_CREATE(user_hello, ENV_TYPE_USER);
-	ENV_CREATE(user_divzero, ENV_TYPE_USER);
+	ENV_CREATE(user_softint, ENV_TYPE_USER);
 #endif // TEST*
 
 	// We only have one user environment for now, so just run it.
 	//cprintf(GRN_FG "Run environment: user_hello\n" RST);
-	cprintf(GRN_FG "Run environment: user_divzero\n" RST);
+	//cprintf(GRN_FG "Run environment: user_divzero\n" RST);
 	env_run(&envs[0]);
 }
 

@@ -71,6 +71,29 @@ TRAPHANDLER(PAGE_FAULT, T_PGFLT); #14
  */
 .globl _alltraps
  _alltraps:
+	# Build trap frame
+	pushl %ds
+	pushl %es
+	pushal
+
+	# Setup data segments
+	xor %ax, %ax # reset %ax
+	movw $GD_KD, %ax
+	mov %ax, %ds
+	mov %ax, %es
+
+	# Call trap(tp)
+	pushl %esp
+	call trap
+	addl $0x4, %esp
+
+.globl trapret
+trapret:
+	popal
+	popl %es
+	popl %ds
+	addl $0x8, %esp	#trapno and error code
+	iret # return from kernel space to user space
 
 /*
  * Define the global symbols for each type of interrupt/exception
