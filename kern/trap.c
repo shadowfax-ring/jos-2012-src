@@ -64,7 +64,7 @@ void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
-	extern uint64_t int_vectors[];
+	extern uint32_t int_vectors[];
 
 	// LAB 3: Your code here.
 	int i;
