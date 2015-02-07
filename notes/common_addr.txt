@@ -2,6 +2,8 @@
 Entry Addresses for basic functions
 ===================================
 
+Note: based on lab1 - depends on the code
+
 bootloader entry
 0x7c00
 

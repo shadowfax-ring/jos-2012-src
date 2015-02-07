@@ -1,4 +1,6 @@
-// Old way to print backtrace by means of argc and argv
+/* Record some code that is another alternative to existing code */
+
+/* 1. Old way to print backtrace by means of argc and argv */
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
@@ -21,3 +23,4 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	
 	return 0;
 }
+
