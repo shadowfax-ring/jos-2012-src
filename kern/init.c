@@ -72,13 +72,11 @@ i386_init(void)
 #else
 	// Touch all you want.
 	//ENV_CREATE(user_hello, ENV_TYPE_USER);
-	ENV_CREATE(user_softint, ENV_TYPE_USER);
-	//ENV_CREATE(user_divzero, ENV_TYPE_USER);
+	ENV_CREATE(user_breakpoint, ENV_TYPE_USER);
 #endif // TEST*
 
 	// We only have one user environment for now, so just run it.
 	//cprintf(GRN_FG "Run environment: user_hello\n" RST);
-	//cprintf(GRN_FG "Run environment: user_divzero\n" RST);
 	env_run(&envs[0]);
 }
 
