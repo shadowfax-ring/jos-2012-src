@@ -1,6 +1,7 @@
 #include <inc/mmu.h>
 #include <inc/x86.h>
 #include <inc/assert.h>
+#include <inc/colors.h>
 
 #include <kern/pmap.h>
 #include <kern/trap.h>
@@ -70,7 +71,12 @@ trap_init(void)
 	int i;
 	for (i = 0; i < 32; i++) {
 		SETGATE(idt[i], 0, GD_KT, int_vectors[i], 0);
+#ifdef DEBUG_JOS
+		cprintf(MAG_FG "%p:\n" RST, int_vectors[i]);
+#endif
 	}
+
+	SETGATE(idt[T_BRKPT], 1, GD_KT, int_vectors[T_BRKPT], 3);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -152,6 +158,9 @@ trap_dispatch(struct Trapframe *tf)
 	switch (tf->tf_trapno) {
 		case T_PGFLT:
 			page_fault_handler(tf);
+			break;
+		case T_BRKPT:
+			monitor(tf);
 			break;
 	}
 
