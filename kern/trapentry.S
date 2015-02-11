@@ -59,12 +59,15 @@ TRAPHANDLER_NOEC(COPROCESSOR_ERROR, T_FPERR); #16
 TRAPHANDLER_NOEC(COPROCESSOR_SEGMENT_OVERRUN, T_COPROC); #9 reserved
 TRAPHANDLER_NOEC(RESERVED_15, T_RES); #15 reserved
 
+TRAPHANDLER_NOEC(SYSCALL_TRAP, T_SYSCALL); #48 syscall
+
 TRAPHANDLER(SYSTEM_ERROR, T_DBLFLT); #8
 TRAPHANDLER(INVALID_TSS, T_TSS); #10
 TRAPHANDLER(SEGMENT_NOT_PRESENT, T_SEGNP); #11
 TRAPHANDLER(STACK_EXCEPTION, T_STACK); #12
 TRAPHANDLER(GENERAL_PROTECTION_FAULT, T_GPFLT); #13
 TRAPHANDLER(PAGE_FAULT, T_PGFLT); #14
+
 
 /*
  * Lab 3: Your code here for _alltraps
@@ -139,4 +142,24 @@ int_vectors:
 	.long 29
 	.long 30
 	.long 31
+	.long 31
+	# 32 - 48
+	.long 32
+	.long 33
+	.long 34
+	.long 35
+	.long 36
+	.long 37
+	.long 38
+	.long 39
+	.long 40
+	.long 41
+	.long 42
+	.long 43
+	.long 44
+	.long 45
+	.long 46
+	.long 47
+	# T_SYSCALL
+	.long SYSCALL_TRAP	#48
 
