@@ -149,7 +149,6 @@ int_vectors:
 	.long 29
 	.long 30
 	.long 31
-	.long 31
 	# 32 - 48
 	.long 32
 	.long 33
