@@ -164,10 +164,12 @@ trap_dispatch(struct Trapframe *tf)
 			monitor(tf);
 			break;
 		case T_SYSCALL:
-			syscall(tf->tf_trapno, tf->tf_regs.reg_edx,
-					tf->tf_regs.reg_ecx, tf->tf_regs.reg_ebx,
-					tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
-			//break;
+			syscall(tf->tf_regs.reg_eax,
+					tf->tf_regs.reg_edx,
+					tf->tf_regs.reg_ecx,
+					tf->tf_regs.reg_ebx,
+					tf->tf_regs.reg_edi,
+					tf->tf_regs.reg_esi);
 			//asm volatile("movl %%eax, %0\n" : "=m"(tf->tf_regs.reg_eax) ::);
 			return;
 	}

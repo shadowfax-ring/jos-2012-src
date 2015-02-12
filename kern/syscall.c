@@ -73,7 +73,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 	switch(syscallno) {
 		case SYS_cputs:
-			sys_cputs((char *) a1, a2);
+			sys_cputs((const char *) a1, a2);
 			break;
 		case SYS_cgetc:
 			ret = sys_cgetc();
