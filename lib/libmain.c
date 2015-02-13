@@ -13,8 +13,8 @@ libmain(int argc, char **argv)
 {
 	// set thisenv to point at our Env structure in envs[].
 	// LAB 3: Your code here.
-	envid_t e_id = sys_getenvid();
 	int i;
+	envid_t e_id = sys_getenvid();
 	for (i = 0; i < NENV; i++) {
 		if (envs[i].env_id == e_id) {
 			thisenv = envs + i;
