@@ -645,7 +645,37 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+	uintptr_t va_start = (uintptr_t) va;
+	uintptr_t va_end = va_start + len;
 
+	// Test 1: Check addresses are below ULIM
+	if (va_start >= ULIM || va_end >= ULIM) {
+		user_mem_check_addr = va_start >= ULIM ? va_start : ULIM;
+		return -E_FAULT;
+	}
+
+	// Test 2: Check permission of each page
+	uintptr_t va_pg_start = ROUNDDOWN(va_start, PGSIZE);
+	uintptr_t va_pg_end = ROUNDUP(va_end, PGSIZE);
+	while (va_pg_start < va_pg_end) {
+
+		// Step 1: Check existence of page table/page directory entry
+		pde_t pde = env->env_pgdir[PDX(va_pg_start)];
+		if (!(pde & PTE_P)) {
+			user_mem_check_addr = va_pg_start < va_start ? va_start : va_pg_start;
+			return -E_FAULT;
+		}
+
+		// Step 2: Check existence of page table entry
+		pte_t *pgtab = KADDR(PTE_ADDR(pde));
+		pte_t pte = pgtab[PTX(va_pg_start)];
+		if ((pte & perm) != perm) {
+			user_mem_check_addr = va_pg_start < va_start ? va_start : va_pg_start;
+			return -E_FAULT;
+		}
+
+		va_pg_start += PGSIZE;
+	}
 	return 0;
 }
 
