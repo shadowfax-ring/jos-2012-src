@@ -1,0 +1,26 @@
+/* Record some code that is another alternative to existing code */
+
+/* 1. Old way to print backtrace by means of argc and argv */
+int
+mon_backtrace(int argc, char **argv, struct Trapframe *tf)
+{
+	uint32_t ebp, eip;
+	uint32_t i = 1;
+	ebp = read_ebp();
+	//cprintf("Number of arguments = %d\n", argc);
+
+	while (ebp != 0) {
+		eip = *(uint32_t *) ((char *)ebp + 4);
+		cprintf("ebp %x eip %x", ebp, eip);
+		cprintf(" args ");
+		while (--argc > 0) {
+			cprintf("%s ", argv[i]);
+			i++;
+		}
+		cprintf("\n");
+		ebp = *(uint32_t *) ebp;
+	}
+	
+	return 0;
+}
+

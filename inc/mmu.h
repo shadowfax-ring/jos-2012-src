@@ -38,6 +38,10 @@
 // offset in page
 #define PGOFF(la)	(((uintptr_t) (la)) & 0xFFF)
 
+// rounding of addresses in page unit
+#define PGROUNDDOWN(la)	((la) & ~(PGSIZE-1))
+#define PGROUNDUP(la)	PGROUNDDOWN((la) + (PGSIZE-1))
+
 // construct linear address from indexes and offset
 #define PGADDR(d, t, o)	((void*) ((d) << PDXSHIFT | (t) << PTXSHIFT | (o)))
 
