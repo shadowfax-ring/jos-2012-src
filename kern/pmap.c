@@ -385,7 +385,8 @@ page_init(void)
 	for (i = 0; i < npages; i++) {
 		if (i == 0  // 1)
 			|| (i*PGSIZE >= IOPHYSMEM && i*PGSIZE < EXTPHYSMEM)	// 3)
-			|| (i*PGSIZE >= EXTPHYSMEM && i*PGSIZE < PADDR(nextfree))) { // 4)
+			|| (i*PGSIZE >= EXTPHYSMEM && i*PGSIZE < PADDR(nextfree)) // 4)
+			|| i*PGSIZE == MPENTRY_PADDR) { // LAB 4
 			pages[i].pp_ref = 1;
 			pages[i].pp_link = NULL;
 		}
@@ -687,7 +688,15 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	if (base + size >= MMIOLIM) {
+		panic("MMIO region cannot exceed MMIOLIM.");
+	}
+
+	void *ret_addr = (void *) base;
+	size = PGROUNDUP(size);
+	boot_map_region(kern_pgdir, base, size, pa, PTE_W|PTE_PCD|PTE_PWT);
+	base += size;
+	return (void *) ret_addr;
 }
 
 static uintptr_t user_mem_check_addr;
