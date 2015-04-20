@@ -22,14 +22,18 @@ static void boot_aps(void);
 void
 test_backtrace(int x)
 {
+#ifdef DEBUG_JOS
 	cprintf("entering test_backtrace %d\n", x);
+#endif
 	if (x > 0) {
 		test_backtrace(x-1);
 	}
 	else {
 		mon_backtrace(0, 0, 0);
 	}
+#ifdef DEBUG_JOS
 	cprintf("leaving test_backtrace %d\n", x);
+#endif
 }
 
 void
@@ -60,13 +64,15 @@ i386_init(void)
 
 	// Exercise 8-4
     //unsigned int i = 0x00646c72;
-    //cprintf(YEL_FG "H%x Wo%s\n" RST, 57616, &i);	
+    //cprintf(YEL_FG "H%x Wo%s\n" RST, 57616, &i);
 
 	// Exercise 8-5
 	//cprintf(CYN_FG "x=%d y=%d\n" RST, 3);
 
 	// Test the stack backtrace function (lab 1 only)
+#ifdef DEBUG_JOS
 	test_backtrace(5);
+#endif
 
 	// Lab 3 user environment initialization functions
 	env_init();
