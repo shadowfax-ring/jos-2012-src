@@ -3,3 +3,8 @@ Question
 1. Compare kern/mpentry.S side by side with boot/boot.S. Bearing in mind that kern/mpentry.S is compiled and linked to run above KERNBASE just like everything else in the kernel, what is the purpose of macro MPBOOTPHYS? Why is it necessary in kern/mpentry.S but not in boot/boot.S? In other words, what could go wrong if it were omitted in kern/mpentry.S? 
 Hint: recall the differences between the link address and the load address that we have discussed in Lab 1.
 Answer: MPBOOTPHYS is used to calculate the absolute address of its symbols, intead of relying the linker to fill them. In boot.S, it's not required becuase this is only the link address and program is not yet loaded to main memory. However in mpentry.S, the entire file will be added to the corresponding address space at run time, so it should be the absolute address, or the load address.
+
+2. It seems that using the big kernel lock guarantees that only one CPU can run the kernel code at a time. Why do we still need separate kernel stacks for each CPU? Describe a scenario in which using a shared kernel stack will go wrong, even with the protection of the big kernel lock.
+Ans:
+
+
