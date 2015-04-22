@@ -85,7 +85,16 @@ sys_exofork(void)
 	// will appear to return 0.
 
 	// LAB 4: Your code here.
-	panic("sys_exofork not implemented");
+	int ret;
+	struct Env *e = NULL;
+
+	ret = env_alloc(&e, 0);
+	if (e) {
+		e->env_status = ENV_NOT_RUNNABLE;
+		e->env_tf = curenv->env_tf;
+	}
+	
+	return ret;
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -105,7 +114,19 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 
 	// LAB 4: Your code here.
-	panic("sys_env_set_status not implemented");
+	int ret;
+	struct Env *e;
+
+	if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE) {
+		return -E_INVAL;
+	}
+
+	ret = envid2env(envid, &e, 1);
+	if (e) {
+		e->env_status = status;
+	}
+
+	return ret;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -150,7 +171,38 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   allocated!
 
 	// LAB 4: Your code here.
-	panic("sys_page_alloc not implemented");
+	// check envid
+	struct Env *e;
+	if (envid2env(envid, &e, 1) != 0) {
+		return -E_BAD_ENV;
+	}
+
+	// check range of va
+	if ((uintptr_t) va >= UTOP) {
+		return -E_INVAL;
+	}
+
+	// check perm bits
+	if (!(perm & PTE_U) || (perm & PTE_P)
+		|| (perm & ~(PTE_AVAIL | PTE_W | PTE_U | PTE_P))) {
+		return -E_INVAL;
+	}
+	
+	int ret;
+	struct PageInfo *pginfo;
+
+	pginfo = page_alloc(ALLOC_ZERO);
+	if (!pginfo) {
+		return -E_NO_MEM;
+	}
+
+	ret = page_insert(e->env_pgdir, pginfo, va, perm);
+	if (!ret) {
+		page_remove(e->env_pgdir, va);
+		return -E_NO_MEM;
+	}
+
+	return 0;
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
