@@ -184,8 +184,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	}
 
 	// check range of va
-	// TODO: check va is page-aligned
-	if ((uintptr_t) va >= UTOP) {
+	if ((uintptr_t) va >= UTOP || !IS_PAGE_ALIGNED(va)) {
 		return -E_INVAL;
 	}
 
@@ -239,31 +238,35 @@ sys_page_map(envid_t srcenvid, void *srcva,
 
 	// LAB 4: Your code here.
 	struct Env *src_env, *dst_env;
-	if (envid2env(srcenvid, &src_env, 1)
-		|| envid2env(dstenvid, &dst_env, 1)) {
+	if (envid2env(srcenvid, &src_env, 1) < 0
+		|| envid2env(dstenvid, &dst_env, 1) < 0) {
 		return -E_BAD_ENV;
 	}
 
-	// TODO: check srcva or dstva is not page-aligned
-	if ((uintptr_t) srcva >= UTOP || (uintptr_t) dstva >= UTOP) {
+	if ((uintptr_t) srcva >= UTOP || !IS_PAGE_ALIGNED(srcva)
+		|| (uintptr_t) dstva >= UTOP || !IS_PAGE_ALIGNED(dstva)) {
 		return -E_INVAL;
 	}
 
-	// TODO: check srcva is not mapped in srcenvid's address space
+	struct PageInfo *src_pginfo;
+	pte_t *pte;
+	src_pginfo = page_lookup(src_env->env_pgdir, srcva, &pte);
+	if (!src_pginfo) {
+		return -E_INVAL;
+	}
 
-	if (!(perm & PTE_U) || (perm & PTE_P)
+	if (!(perm & PTE_U) || !(perm & PTE_P)
 		|| (perm & ~(PTE_AVAIL | PTE_W | PTE_U | PTE_P))) {
 		return -E_INVAL;
 	}
 
-	// TODO: check perm & PTE_W, but srcva is read-only in srcenvid's address space
-	struct PageInfo *pginfo;
-	pginfo = page_alloc(ALLOC_ZERO);
-	if (!pginfo) {
-		return -E_NO_MEM;
+	if ((perm & PTE_W) && !(*pte | PTE_W)) {
+		return -E_INVAL;
 	}
 
-	// TODO: do the mapping
+	if (page_insert(dst_env->env_pgdir, src_pginfo, dstva, perm) < 0) {
+		return -E_NO_MEM;
+	}
 
 	return 0;
 }
@@ -286,8 +289,7 @@ sys_page_unmap(envid_t envid, void *va)
 		return -E_BAD_ENV;
 	}
 
-	// TODO: check va is not page-aligned
-	if ((uintptr_t) va >= UTOP) {
+	if ((uintptr_t) va >= UTOP || !IS_PAGE_ALIGNED(va)) {
 		return -E_INVAL;
 	}
 
@@ -391,6 +393,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			break;
 		case SYS_page_alloc:
 			ret = sys_page_alloc(a1, (void *) a2, a3);
+			break;
+		case SYS_page_map:
+			ret = sys_page_map(a1, (void *) a2, a3, (void *) a4, a5);
+			break;
+		case SYS_page_unmap:
+			ret = sys_page_unmap(a1, (void *) a2);
 			break;
 		case NSYSCALLS:
 		default:

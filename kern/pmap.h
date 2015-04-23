@@ -47,6 +47,9 @@ _kaddr(const char *file, int line, physaddr_t pa)
 	return (void *)(pa + KERNBASE);
 }
 
+/* This macro takes an address and checks if the address is page aligned */
+#define IS_PAGE_ALIGNED(addr) !((uintptr_t) addr & (PGSIZE - 1))
+
 
 enum {
 	// For page_alloc, zero the returned physical page.
