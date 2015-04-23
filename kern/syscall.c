@@ -88,7 +88,7 @@ sys_exofork(void)
 	int ret;
 	struct Env *e;
 
-	ret = env_alloc(&e, 0);
+	ret = env_alloc(&e, curenv->env_id);
 	if (ret < 0) {
 		return ret;
 	}
@@ -125,8 +125,7 @@ sys_env_set_status(envid_t envid, int status)
 		return -E_INVAL;
 	}
 
-	ret = envid2env(envid, &e, 1);
-	if (!ret) {
+	if (envid2env(envid, &e, 1) < 0) {
 		return -E_BAD_ENV;
 	}
 
@@ -179,19 +178,19 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	// check envid
 	struct Env *e;
 	struct PageInfo *pginfo;
-	int ret;
 
-	if (envid2env(envid, &e, 1)) {
+	if (envid2env(envid, &e, 1) < 0) {
 		return -E_BAD_ENV;
 	}
 
 	// check range of va
+	// TODO: check va is page-aligned
 	if ((uintptr_t) va >= UTOP) {
 		return -E_INVAL;
 	}
 
 	// check perm bits
-	if (!(perm & PTE_U) || (perm & PTE_P)
+	if (!(perm & PTE_U) || !(perm & PTE_P)
 		|| (perm & ~(PTE_AVAIL | PTE_W | PTE_U | PTE_P))) {
 		return -E_INVAL;
 	}
@@ -203,8 +202,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	}
 
 	// map page to a virtual address
-	ret = page_insert(e->env_pgdir, pginfo, va, perm);
-	if (!ret) {
+	if (page_insert(e->env_pgdir, pginfo, va, perm) < 0) {
 		page_remove(e->env_pgdir, va);
 		return -E_NO_MEM;
 	}
@@ -288,6 +286,7 @@ sys_page_unmap(envid_t envid, void *va)
 		return -E_BAD_ENV;
 	}
 
+	// TODO: check va is not page-aligned
 	if ((uintptr_t) va >= UTOP) {
 		return -E_INVAL;
 	}
