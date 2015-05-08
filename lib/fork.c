@@ -23,10 +23,8 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   Use the read-only page table mappings at uvpt
 	//   (see <inc/memlayout.h>).
-	pte_t pte = uvpt[PGNUM(addr)];
 	if (!((err & FEC_WR) && (uvpd[PDX(addr)] & PTE_P) &&
-		(pte & PTE_COW))) {
-		cprintf("%d %d %d\n", err & FEC_WR, uvpd[PDX(addr)] & PTE_P, pte & PTE_COW);
+		  (uvpt[PGNUM(addr)] & PTE_COW))) {
 		panic("Page fault access is not a write or to a COW page.");
 	}
 
@@ -73,7 +71,8 @@ duppage(envid_t envid, unsigned pn)
 	void *addr = (void *) (pn * PGSIZE);
 
 	if ((pte & PTE_W) || (pte & PTE_COW)) {
-		if ((r = sys_page_map(0, addr, envid, addr, PTE_U|PTE_P|PTE_COW)) < 0) {
+		if ((r = sys_page_map(0, addr, envid, addr,
+							  PTE_U|PTE_P|PTE_COW)) < 0) {
 			panic("sys_page_map: failed to map page");
 		}
 		if ((r = sys_page_map(0, addr, 0, addr, PTE_U|PTE_P|PTE_COW)) < 0) {
@@ -132,23 +131,27 @@ fork(void)
 	// if it's a parent
 	uintptr_t addr;
 
-	for (addr = UTEXT; addr <= UTOP - PGSIZE; addr += PGSIZE) {
-		int pn = PGNUM(addr);
-		pte_t pte = uvpt[pn];
-		if ((pte & PTE_P) || (pte & PTE_U)) {
-			if (duppage(envid, pn) < 0) {
-				panic("duppage: map error.");
+	for (addr = UTEXT; addr < UTOP - PGSIZE; addr += PGSIZE) {
+		if ((uvpd[PDX(addr)] & PTE_P) &&
+			(uvpt[PGNUM(addr)] & (PTE_P|PTE_U))) {
+			if (duppage(envid, PGNUM(addr)) < 0) {
+				panic("dupage: page remap failed");
 			}
 		}
 	}
 
-	if (sys_page_alloc(envid, (void *) (UXSTACKTOP - PGSIZE), PTE_P|PTE_U|PTE_W) < 0) {
-		panic("sys_page_alloc: failed to allocate page for user exception stack.");
+	if (sys_page_alloc(envid, (void *) (UXSTACKTOP - PGSIZE),
+					   PTE_P|PTE_U|PTE_W) < 0) {
+		panic("sys_page_alloc: failed to allocate page for "
+			  "user exception stack.");
 	}
 
+	// Assembly language pgfault entrypoint defined in lib/pfentry.S.
 	extern void _pgfault_upcall(void);
+
 	if (sys_env_set_pgfault_upcall(envid, _pgfault_upcall) < 0) {
-		panic("sys_env_set_pgfault_upcall: failed to set pgfault upcall in child.");
+		panic("sys_env_set_pgfault_upcall: failed to set pgfault upcall "
+			  "in child.");
 	}
 
 	if (sys_env_set_status(envid, ENV_RUNNABLE) < 0) {
