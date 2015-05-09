@@ -76,7 +76,7 @@ trap_init(void)
 
 	// LAB 3: Your code here.
 	int i;
-	for (i = 0; i < 32; i++) {
+	for (i = 0; i < 48; i++) {
 		SETGATE(idt[i], 0, GD_KT, int_vectors[i], 0);
 #ifdef DEBUG_JOS
 		cprintf(MAG_FG "%p:\n" RST, int_vectors[i]);
@@ -218,6 +218,10 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		lapic_eoi();
+		sched_yield();
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -245,6 +249,7 @@ trap(struct Trapframe *tf)
 	// sched_yield()
 	if (xchg(&thiscpu->cpu_status, CPU_STARTED) == CPU_HALTED)
 		lock_kernel();
+
 	// Check that interrupts are disabled.  If this assertion
 	// fails, DO NOT be tempted to fix it by inserting a "cli" in
 	// the interrupt path.
