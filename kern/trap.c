@@ -67,7 +67,6 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
-
 void
 trap_init(void)
 {
@@ -76,16 +75,16 @@ trap_init(void)
 
 	// LAB 3: Your code here.
 	int i;
-	for (i = 0; i < 48; i++) {
+	for (i = 0; i < 48 ; i++) {
 		SETGATE(idt[i], 0, GD_KT, int_vectors[i], 0);
 #ifdef DEBUG_JOS
 		cprintf(MAG_FG "%p:\n" RST, int_vectors[i]);
 #endif
 	}
 
-	SETGATE(idt[T_BRKPT], 1, GD_KT, int_vectors[T_BRKPT], 3);
+	SETGATE(idt[T_BRKPT], 0, GD_KT, int_vectors[T_BRKPT], 3);
 
-	SETGATE(idt[T_SYSCALL], 1, GD_KT, int_vectors[T_SYSCALL], 3);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, int_vectors[T_SYSCALL], 3);
 
 	// Per-CPU setup
 	trap_init_percpu();
