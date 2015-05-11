@@ -79,6 +79,13 @@
 // Address in page table or page directory entry
 #define PTE_ADDR(pte)	((physaddr_t) (pte) & ~0xFFF)
 
+// Check page aligned address
+#define IS_PAGE_ALIGNED(addr) (((uintptr_t) addr & (PGSIZE - 1)) == 0)
+
+// page-level permission is valid
+#define IS_VALID_PERM(perm)	((perm & PTE_U) && (perm & PTE_P) &&\
+						     !(perm & ~(PTE_AVAIL|PTE_W|PTE_U|PTE_P)))
+
 // Control Register flags
 #define CR0_PE		0x00000001	// Protection Enable
 #define CR0_MP		0x00000002	// Monitor coProcessor

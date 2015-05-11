@@ -345,7 +345,42 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+	struct Env *e = NULL;
+	if (envid2env(envid, &e, 0) < 0) {
+		return -E_BAD_ENV;
+	}
+
+	if (!e->env_ipc_recving) {
+		return -E_IPC_NOT_RECV;
+	}
+
+	if ((uintptr_t) srcva < UTOP) {
+		if (!IS_PAGE_ALIGNED(srcva) || !IS_VALID_PERM(perm)) {
+			return -E_INVAL;
+		}
+		
+		struct PageInfo *pginfo;
+		pte_t *pte = NULL;
+		if (!(pginfo = page_lookup(curenv->env_pgdir, srcva, &pte))) {
+			return -E_INVAL;
+		}
+
+		if((perm & PTE_W) && pte && !(*pte & PTE_W)) {
+			return -E_INVAL;
+		}
+
+		if (page_insert(e->env_pgdir, pginfo, srcva, perm) < 0) {
+			return -E_NO_MEM;
+		}
+	}
+	
+	e->env_ipc_recving = 0;
+	e->env_ipc_from = curenv->env_id;
+	e->env_ipc_value = value;
+	e->env_ipc_perm = ((uintptr_t) srcva < UTOP) ? perm : 0;
+	e->env_status = ENV_RUNNABLE;
+
+	return 0;
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -374,7 +409,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Call the function corresponding to the 'syscallno' parameter.
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
-	int ret = 0;
+	int ret = -E_INVAL;
 
 	switch(syscallno) {
 		case SYS_cputs:
@@ -409,9 +444,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		case SYS_env_set_pgfault_upcall:
 			ret = sys_env_set_pgfault_upcall(a1, (void *) a2);
 			break;
-		case NSYSCALLS:
-		default:
-			ret = -E_INVAL;
+		case SYS_ipc_try_send:
+			ret = sys_ipc_try_send(a1, a2, (void *) a3, a4);
+			break;
+		case SYS_ipc_recv:
+			ret = sys_ipc_recv((void *) a1);
+			break;
 	}
 
 	return ret;
