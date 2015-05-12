@@ -379,6 +379,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	e->env_ipc_value = value;
 	e->env_ipc_perm = ((uintptr_t) srcva < UTOP) ? perm : 0;
 	e->env_status = ENV_RUNNABLE;
+	e->env_tf.tf_regs.reg_eax = 0; // revisit
 
 	return 0;
 }
@@ -398,7 +399,16 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+	// revisit: no need to check dstva >= UTOP
+	if ((uintptr_t) dstva < UTOP && !IS_PAGE_ALIGNED(dstva)) {
+		return -E_INVAL;
+	}
+	
+	curenv->env_ipc_recving = 1;
+	curenv->env_ipc_dstva = dstva;
+	curenv->env_status = ENV_NOT_RUNNABLE;	
+	sched_yield();
+
 	return 0;
 }
 
