@@ -23,6 +23,10 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   Use the read-only page table mappings at uvpt
 	//   (see <inc/memlayout.h>).
+	if (!((err & FEC_WR) && (uvpd[PDX(addr)] & PTE_P) &&
+		  (uvpt[PGNUM(addr)] & PTE_COW))) {
+		panic("Page fault access is not a write or to a COW page.");
+	}
 
 	// LAB 4: Your code here.
 
@@ -34,8 +38,16 @@ pgfault(struct UTrapframe *utf)
 	//   No need to explicitly delete the old page's mapping.
 
 	// LAB 4: Your code here.
+	addr = (void *) PGROUNDDOWN((uintptr_t) addr);
+	if ((r = sys_page_alloc(0, PFTEMP, PTE_U|PTE_P|PTE_W)) < 0) {
+		panic("sys_page_alloc: failed to allocate a page.");
+	}
 
-	panic("pgfault not implemented");
+	memmove(PFTEMP, addr, PGSIZE);
+
+	if ((r = sys_page_map(0, PFTEMP, 0, addr, PTE_U|PTE_P|PTE_W)) < 0) {
+		panic("sys_page_map: failed to map page.");
+	}
 }
 
 //
@@ -55,8 +67,24 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
-	return 0;
+	pte_t pte = uvpt[pn];
+	void *addr = (void *) (pn * PGSIZE);
+
+	if ((pte & PTE_W) || (pte & PTE_COW)) {
+		if ((r = sys_page_map(0, addr, envid, addr,
+							  PTE_U|PTE_P|PTE_COW)) < 0) {
+			panic("sys_page_map: failed to map page");
+		}
+		if ((r = sys_page_map(0, addr, 0, addr, PTE_U|PTE_P|PTE_COW)) < 0) {
+			panic("sys_page_map: failed to map page");
+		}
+	} else {
+		if ((r = sys_page_map(0, addr, envid, addr, PTE_U|PTE_P)) < 0) {
+			panic("sys_page_map: failed to map page");
+		}
+	}
+	
+	return r;
 }
 
 //
@@ -79,7 +107,58 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+	envid_t envid;
+
+	// Set up our own COW page fault handler
+	set_pgfault_handler(pgfault);
+
+	// Create a child
+	envid = sys_exofork();
+	if (envid < 0) {
+		panic("sys_exofork: %e", envid);
+	}
+
+	// if it's a child
+    if (envid == 0) {
+        // We're the child.
+        // The copied value of the global variable 'thisenv'
+        // is no longer valid (it refers to the parent!).
+        // Fix it and return 0.
+        thisenv = &envs[ENVX(sys_getenvid())];
+        return 0;
+    }
+
+	// if it's a parent
+	uintptr_t addr;
+
+	for (addr = UTEXT; addr < UTOP - PGSIZE; addr += PGSIZE) {
+		if ((uvpd[PDX(addr)] & PTE_P) &&
+			(uvpt[PGNUM(addr)] & (PTE_P|PTE_U))) {
+			if (duppage(envid, PGNUM(addr)) < 0) {
+				panic("dupage: page remap failed");
+			}
+		}
+	}
+
+	if (sys_page_alloc(envid, (void *) (UXSTACKTOP - PGSIZE),
+					   PTE_P|PTE_U|PTE_W) < 0) {
+		panic("sys_page_alloc: failed to allocate page for "
+			  "user exception stack.");
+	}
+
+	// Assembly language pgfault entrypoint defined in lib/pfentry.S.
+	extern void _pgfault_upcall(void);
+
+	if (sys_env_set_pgfault_upcall(envid, _pgfault_upcall) < 0) {
+		panic("sys_env_set_pgfault_upcall: failed to set pgfault upcall "
+			  "in child.");
+	}
+
+	if (sys_env_set_status(envid, ENV_RUNNABLE) < 0) {
+		panic("sys_env_set_status: failed to set status for envid.");
+	}
+
+	return envid;
 }
 
 // Challenge!

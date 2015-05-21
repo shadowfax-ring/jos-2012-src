@@ -11,6 +11,7 @@
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
 #include <kern/trap.h>
+#include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -25,8 +26,15 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "Print backtrace of current function", mon_backtrace },
+	{ "showmappings", 
+	  "Display PA => VA mappings in currently active address space "
+	  "at page boundary", 
+	  mon_showmappings },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
+
+static void showmappings_usage();
 
 /***** Implementations of basic kernel monitor commands *****/
 
@@ -59,10 +67,97 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+	struct Eipdebuginfo eipinfo;
+	uintptr_t ebp, eip;
+
+	ebp = read_ebp();
+	while (ebp != 0) {
+		eip = *((uintptr_t *)ebp + 1);
+		cprintf("ebp %x eip %x args ", ebp, eip);
+
+		int32_t i = 0;
+		while (i < 5) {
+			uint32_t arg = *((uintptr_t *) ebp + 2 + i);
+			cprintf("%08x ", arg);
+			i++;
+		}
+		cprintf("\n");
+
+		debuginfo_eip(eip, &eipinfo);
+		cprintf("%s:%d: ", eipinfo.eip_file, eipinfo.eip_line);
+		cprintf("%.*s", eipinfo.eip_fn_namelen, eipinfo.eip_fn_name);
+//		int32_t j = 0;
+//		while (j < eipinfo.eip_fn_namelen) {
+//			cprintf("%c", eipinfo.eip_fn_name[j]);
+//			j++;
+//		}
+		cprintf("+%d", eip - eipinfo.eip_fn_addr);
+		cprintf("\n");
+
+		ebp = *(uintptr_t *) ebp;
+	}
+	
 	return 0;
 }
 
+int
+mon_showmappings(int argc, char **argv, struct Trapframe *tf)
+{
+	uintptr_t l_addr, r_addr, va;
+
+	cprintf("Show mappings:\n");
+	if (argc < 2 || argc > 3) {
+		showmappings_usage();
+		return 1;
+	}
+
+	l_addr = strtol(argv[1], NULL, 16);
+	if (argc == 2) {	// one page
+		r_addr = strtol(argv[1], NULL, 16);
+	}
+	else {
+		r_addr = strtol(argv[2], NULL, 16);
+	}
+	if (l_addr > r_addr) {
+		cprintf("Address range not valid: %p - %p\n", l_addr, r_addr);
+		return -1;
+	}
+
+	l_addr = ROUNDDOWN(l_addr, PGSIZE);
+	r_addr = ROUNDDOWN(r_addr, PGSIZE);
+	cprintf("%p - %p\n", l_addr, r_addr);
+
+	va = l_addr;
+	while (va <= r_addr) {
+		int pdx = PDX(va);
+		int ptx = PTX(va);
+
+		cprintf("va: %p  ", va);
+		pde_t pde = kern_pgdir[pdx];
+		if (pde & PTE_P) {
+			cprintf("PDE: %p  ", pde);
+			pte_t *pgtab = (uintptr_t *) KADDR(PTE_ADDR(pde));
+			pte_t pte = pgtab[ptx];
+			if (pte & PTE_P) {
+				cprintf("PTE: %p  ", pte);
+				physaddr_t pa = PTE_ADDR(pte);
+				uint32_t perm = PGOFF(pte);
+				cprintf("pa: %p  perm: %b", pa, perm);
+			}
+		}
+		cprintf("\n");
+		va += PGSIZE;
+	}
+
+	return 0;
+}
+
+/***** Util functions *****/
+static void showmappings_usage()
+{
+	cprintf("Usage: showmappings a1 a2\n");
+	cprintf("    specify address range\n");
+}
 
 
 /***** Kernel monitor command interpreter *****/
@@ -127,3 +222,4 @@ monitor(struct Trapframe *tf)
 				break;
 	}
 }
+

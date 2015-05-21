@@ -1,0 +1,29 @@
+===================================
+Entry Addresses for basic functions
+===================================
+
+Note: based on lab1 - depends on the code
+
+bootloader entry
+0x7c00
+
+kernel entry
+physical addr: 0x10000c
+vritual addr:  0xf010000c
+
+cprintf entry
+f01008bd
+f01008be
+
+vcprintf entry
+0xf0100897
+0xf0100898
+
+vprintfmt entry
+0xf0100cdf
+0xf0100ce0
+->continue point
+f0100d00
+
+test_backtrace entry
+0xf0100104

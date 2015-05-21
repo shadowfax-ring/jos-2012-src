@@ -1,0 +1,125 @@
+PartI - Physical Page Management
+In this part, mainly implemented physical page management code/functions. 
+Allocated a PageInfo array to keep track of all available physical pages.
+Each entry of PageInfo array maps to a physical page.
+Moreover, implemented a page free list to keep track of free physical memory 
+pages.
+Guess: at this step, everything is done in memory-mapped kernel stack
+
+PartII - Virtual Memory
+boot_alloc(n) - allocate pages of specified memory n, and returns next free page
+mem_init() - setup two-level page table
+1) kern_pgdir as 4K page directory
+2) pages array to track all phsycial pages by struct PageInfo
+page_init() - init pages array to setup page_free_list
+page_alloc() - allocate one physical page by returning a page from page_free_list
+page_free() - free a physical page by adding it back to page_free_list
+page_decref() - decrement the ref count on a page, free it if no more refs
+pgdir_walk() - return a pointer to PTE for linear address va
+1) if create is false, do nothing if PDE not exists
+2) if create is true, allocate a new page table page, update the PDE, increment the ref count for new allocated PageInfo
+boot_map_region - Map [va, va+size) to [pa, pa+size), only intended to setup static mappings
+above UTOP, does not change pp_ref for mapped pages -> initialized PTEs
+page_insert() - Map physical page 'pp' at virtual address 'va'
+page_lookup() - return PageInfo at address 'va'
+page_remove() - Remove/Decrement ref count of a 'pp' mapped with 'va'
+tlb_invalidate() - invalidated a TLB entry
+
+Virtual Memory Address Space (per process)
+From top to bottom
+
+0xffffffff			Top of memory				TOP_OF_MEMORY
+......(32MB)
+0xfe000000			Device memory				DEVICE_MEMORY
+......(224MB)
+0xf0000000			Kernel Base					KERNBASE/KSTACKTOP
+......(32KB/8*PGSIZE)
+0xefff8000			CPU0's Kernel Stack			CPU0_KSTACK
+......(32KB/8*PGSIZE)
+0xefff0000			CPU0's Kernel Stack Gap		CPU0_KSTACK_GAP/INVALID
+......32KB/8*PGSIZE
+0xeffe8000			CPU1's Kernel Stack			CPU1_KSTACK
+......(32KB/8*PGSIZE)
+0xeffe0000			CPU1's Kernel Stack Gap		CPU_KSTACK_GAP/INVALID
+......(4MB from KERNBASE)
+0xefc00000			Memory Mapped IO Limit		MMIOLIM
+......(4MB)
+0xef800000			Memory Mapped IO Base		ULIM/MMIOBASE
+......(4MB)
+0xef400000			Current Page Table			UVPT
+......(4MB)
+0xef000000			Read-Only Pages				UPAGES
+......(4MB)
+0xeec00000			Read-Only ENVS				UTOP/UENVS/UXSTACKTOP
+......(4KB)
+0xeebff000			Empty Memory
+......(4KB)
+0xeebfe000			Top of User Stack			USTACKTOP
+......(4KB)
+0xeebfd000			Normal User Stack			USTACKBASE
+......
+0x00800000			Begin of Program Data & Heap
+......(4KB)
+0x007ff000			Temporary Mapping for User Page-Fault/Empty
+......(4092KB)
+0x00400000			Temporary Mappings			UTEMP/Empty
+......(2MB)
+0x00200000			User Level Stabs Data		USTABDATA/Empty
+......(2MB)
+0x00000000			Start of Virtual Memory		Empty
+
+Question
+1. Assuming that the following JOS kernel code is correct, what type should variable x have, uintptr_t or physaddr_t?
+	mystery_t x;
+	char* value = return_a_pointer();
+	*value = 10;
+	x = (mystery_t) value;
+Since *value = 10, then x should be physical address - physaddr_t;
+
+Part II - Kernel Address Space
+1. Map 'pages" array to va that user level program can access
+2. Map kernel stack specified by bootstack to va for kstack
+3. Map all memory at KERBASE to physical address [0, 2^32-KERNBASE)
+
+Question
+2. What entries (rows) in the page directory have been filled in at this point? What addresses do they map and where do they point? In other words, fill out this table as much as possible:
+Entry	Base Virtual Address	Points to (logically):
+1023	0xffc00000				0x3be007 (Page table for top 4MB of phys memory)
+1022	0xff800000				0x3bf007
+1021	0xff400000				0x3c0007
+...
+963		0xf00c0000				0x3fa007
+962		0xf0080000				0x3fb007
+961		0xf0040000				0x3fc007
+960		0xf0000000(KERNBASE)	0x3ff007 (page table from KERNBASE) - from physical address 0
+959		0xefff8000(KSTACK)		0x3fe007 (page table of kernel stack)
+958		?						?
+957		0xef400000(UVPT)		0x11e005 (page table of 4K kernel page directory)
+956		0xef000000(UPAGES)		0x3fd007 (page table of pages array)
+.		?						?
+2		0x00800000				?
+1		0x00400000				?
+0		0x00000000				[see next question]
+
+***Mappings not shown on kern_pgdir
+1) kern_pgdir: kva -> 0xf011e000	pa -> 0x0011e000
+2) pages array: kva -> 0xf011f000	pa -> 0x0011f000
+
+3. (From Lecture 3) We have placed the kernel and user environment in the same address space. Why will user programs not be able to read or write the kernel's memory? What specific mechanisms protect the kernel memory?
+Ans: There is permission bit set for user/kernel environment in each pde & pte
+Moreover, by design, user level program will not access VA that is above ULIM/KERNBASE
+
+4. What is the maximum amount of physical memory that this operating system can support? Why?
+Ans: less than 2^32, deduct memory allocated for page directory/page tables.
+
+5. How much space overhead is there for managing memory, if we actually had the maximum amount of physical memory? How is this overhead broken down?
+
+6. Revisit the page table setup in kern/entry.S and kern/entrypgdir.c. Immediately after we turn on paging, EIP is still a low number (a little over 1MB). At what point do we transition to running at an EIP above KERNBASE? What makes it possible for us to continue executing at a low EIP between when we enable paging and when we begin running at an EIP above KERNBASE? Why is this transition necessary?
+
+Challenge! Extend the JOS kernel monitor with commands to:
+1. Display in a useful and easy-to-read format all of the physical page mappings (or lack thereof) that apply to a particular range of virtual/linear addresses in the currently active address space. For example, you might enter 'showmappings 0x3000 0x5000' to display the physical page mappings and corresponding permission bits that apply to the pages at virtual addresses 0x3000, 0x4000, and 0x5000.
+2. Explicitly set, clear, or change the permissions of any mapping in the current address space.
+3. Dump the contents of a range of memory given either a virtual or physical address range. Be sure the dump code behaves correctly when the range extends across page boundaries!
+4. Do anything else that you think might be useful later for debugging the kernel. (There's a good chance it will be!)
+Ans: finish basic functionality for showmappings
+

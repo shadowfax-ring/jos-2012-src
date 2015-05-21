@@ -3,6 +3,7 @@
 #include <inc/stdio.h>
 #include <inc/string.h>
 #include <inc/assert.h>
+#include <inc/colors.h>
 
 #include <kern/monitor.h>
 #include <kern/console.h>
@@ -17,6 +18,23 @@
 
 static void boot_aps(void);
 
+// Test the stack backtrace function (lab 1 only)
+void
+test_backtrace(int x)
+{
+#ifdef DEBUG_JOS
+	cprintf("entering test_backtrace %d\n", x);
+#endif
+	if (x > 0) {
+		test_backtrace(x-1);
+	}
+	else {
+		mon_backtrace(0, 0, 0);
+	}
+#ifdef DEBUG_JOS
+	cprintf("leaving test_backtrace %d\n", x);
+#endif
+}
 
 void
 i386_init(void)
@@ -36,6 +54,25 @@ i386_init(void)
 
 	// Lab 2 memory management initialization functions
 	mem_init();
+#ifdef DEBUG_JOS
+	cprintf(GRN_FG "Memory management initialization successful\n" RST);
+#endif
+
+	// Exercise 8-3
+	//int x = 1, y = 3, z = 4;
+	//cprintf(GRN_FG "x %d, y %x, z %d\n" RST, x, y, z);
+
+	// Exercise 8-4
+    //unsigned int i = 0x00646c72;
+    //cprintf(YEL_FG "H%x Wo%s\n" RST, 57616, &i);
+
+	// Exercise 8-5
+	//cprintf(CYN_FG "x=%d y=%d\n" RST, 3);
+
+	// Test the stack backtrace function (lab 1 only)
+#ifdef DEBUG_JOS
+	test_backtrace(5);
+#endif
 
 	// Lab 3 user environment initialization functions
 	env_init();
@@ -50,6 +87,7 @@ i386_init(void)
 
 	// Acquire the big kernel lock before waking up APs
 	// Your code here:
+	lock_kernel();
 
 	// Starting non-boot CPUs
 	boot_aps();
@@ -122,9 +160,8 @@ mp_main(void)
 	// only one CPU can enter the scheduler at a time!
 	//
 	// Your code here:
-
-	// Remove this after you finish Exercise 4
-	for (;;);
+	lock_kernel();
+	sched_yield();
 }
 
 /*

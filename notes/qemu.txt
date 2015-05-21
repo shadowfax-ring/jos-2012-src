@@ -1,0 +1,8 @@
+QEMU tips
+1. debug via gdb
+- run qemu-gdb in one shell
+- run gdb in another shell
+
+2. boot JOS into particular user program
+- make run-x or make run-x-nox
+
