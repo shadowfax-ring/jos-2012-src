@@ -1,0 +1,8 @@
+Question
+
+1. Do you have to do anything else to ensure that this I/O privilege setting is saved and restored properly when you subsequently switch from one environment to another? Why?
+
+2. How long approximately did it take you to do this lab?
+
+3. We simplified the file system this year with the goal of making more time for the final project. Do you feel like you gained a basic understanding of the file I/O in JOS? Feel free to suggest things we could improve.
+
