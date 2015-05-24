@@ -394,7 +394,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 			return -E_INVAL;
 		}
 
-		if (page_insert(e->env_pgdir, pginfo, srcva, perm) < 0) {
+		if (page_insert(e->env_pgdir, pginfo, e->env_ipc_dstva, perm) < 0) {
 			return -E_NO_MEM;
 		}
 	}
