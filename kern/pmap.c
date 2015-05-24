@@ -610,8 +610,9 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	struct PageInfo *pginfo;
+
 	pte_t *pte = pgdir_walk(pgdir, va, 0);
-	if (!pte) {
+	if (!pte || !(*pte & PTE_P)) {
 		return NULL;
 	}
 
