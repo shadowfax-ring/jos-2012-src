@@ -70,7 +70,8 @@ duppage(envid_t envid, unsigned pn)
 	pte_t pte = uvpt[pn];
 	void *addr = (void *) (pn * PGSIZE);
 
-	if ((pte & PTE_W) || (pte & PTE_COW)) {
+	if (!(pte & PTE_SHARE) &&
+		((pte & PTE_W) || (pte & PTE_COW))) {
 		if ((r = sys_page_map(0, addr, envid, addr,
 							  PTE_U|PTE_P|PTE_COW)) < 0) {
 			panic("sys_page_map: failed to map page");
@@ -79,7 +80,7 @@ duppage(envid_t envid, unsigned pn)
 			panic("sys_page_map: failed to map page");
 		}
 	} else {
-		if ((r = sys_page_map(0, addr, envid, addr, PTE_U|PTE_P)) < 0) {
+		if ((r = sys_page_map(0, addr, envid, addr, pte & PTE_SYSCALL)) < 0) {
 			panic("sys_page_map: failed to map page");
 		}
 	}

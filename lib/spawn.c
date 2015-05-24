@@ -301,6 +301,22 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
-	return 0;
+	uintptr_t addr;
+	int r;
+
+	for (addr = UTEXT; addr < UTOP - PGSIZE; addr += PGSIZE) {
+		if ((uvpd[PDX(addr)] & PTE_P) &&
+			(uvpt[PGNUM(addr)] & (PTE_P|PTE_U))) {
+			pte_t pte = uvpt[PGNUM(addr)];
+			if (pte & PTE_SHARE) {
+				if ((r = sys_page_map(0, (void *) addr, child, (void *) addr,
+									  pte & PTE_SYSCALL)) < 0) {
+					panic("copy_shared_pages: failed to copy shared pages.");
+				}
+			}
+		}
+	}
+
+	return r;
 }
 
