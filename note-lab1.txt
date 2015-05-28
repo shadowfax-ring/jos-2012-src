@@ -1,0 +1,71 @@
+1. About alignments
+When CPU and memory are transmitting data, it takes place in units of double 
+word at addresses evenly divisible by four. CPU also converts requests of 
+mis-aligned words/double words into sequence of requests acceptable to memmory
+interface. However, this conversion will take extra memory cycles. Thus, it's
+good practice to design data structures with consideration of alignment(s).
+Besides, CPU instructions alignment can also result in performance increase, 
+although not strictly required.
+
+2. Physical address space
+
++------------------+  <- 0xFFFFFFFF (4GB)
+|      32-bit      |
+|  memory mapped   |
+|     devices      |
+|                  |
+/\/\/\/\/\/\/\/\/\/\
+
+/\/\/\/\/\/\/\/\/\/\
+|                  |
+|      Unused      |
+|                  |
++------------------+  <- depends on amount of RAM
+|                  |
+|                  |
+| Extended Memory  |
+|                  |
+|                  |
++------------------+  <- 0x00100000 (1MB)
+|     BIOS ROM     |
++------------------+  <- 0x000F0000 (960KB)
+|  16-bit devices, |
+|  expansion ROMs  |
++------------------+  <- 0x000C0000 (768KB)
+|   VGA Display    |
++------------------+  <- 0x000A0000 (640KB)
+|                  |
+|    Low Memory    |
+|                  |
++------------------+  <- 0x00000000
+
+3. PC boot workflow
+1) BIOS always gets control of the machine
+2) Processor enters real mode and sets CS to 0xf000 and the IP to 0xfff0
+   (Execution begins at that CS:IP segment address)
+3) The first thing BIOS does is to jmp back to an ealier position
+4) BIOS sets up interrupt descriptor table and initializes devices such as
+   VGA display
+5) After initializing important devices, BIOS searches for a bootable devices
+   such as floppy, hard drive, CD-ROM, etc
+6) BIOS loads boot sector at address range 0x7c00-0x7dff, jmp to that address
+   (0000:7c00), and then pass control to boot loader(boot/boot.S)
+7) Boot loader switches the processor from real mode to protected mode and finally to 32-bit mode
+8) Boot loader reads the kernel from disk and enters the kernel entry point
+9) Kernel gets loaded
+10) It sets up new page directory to map 4MB address space
+
+Notes
+1. QEMU tips
+ctl+a c - to switch to monitor mode
+
+2. A20 control
+- first write 0xd1 to port 0x64
+- then write 0xdd/0xdf to disable/enable A20
+
+3. Important addresses
+[f000:fff0] - first instruction address when qemu starts
+[0000:7c00] - first instruction address of boot loader
+[0008:7d63] - last instruction address of boot loader
+[0008:10000c] - first instruction address of kernel
+

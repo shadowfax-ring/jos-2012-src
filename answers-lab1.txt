@@ -5,7 +5,7 @@ Then it switches from protected mode to i386 by a ljmp instruction - (ljmp $PROT
 This allows a code segment selector(%cs) to be specified with value 0x8, which refers to the code descriptor entry in GDT. That descriptor describes a 32-bit code segment, so the processor has switched to 32-bit mode.
 
 2. What is the last instruction of the boot loader executed, and what is the first instruction of the kernel it just loaded?
-Ans: The first instruction of boot loader is to set the value of data segment selector(%ds).
+Ans: The first instruction of bootmain function is to set the value of data segment selector(%ds).
 Boot loader loads to physical address 0x10000 with 0x1000 bytes from kernel starting at kernel offset 0x0.
 Last instruction of the boot loader is to call the entry point of kernel. - 0x7d63: call *0x10018 (which is at address 0x0010000c)
 The first instruction of the kernel is 0x10000c:    movw   $0x1234,0x472
@@ -15,10 +15,11 @@ The first instruction of the kernel is at physical address: 0x10000c
 
 4. How does the boot loader decide how many sectors it must read in order to fetch the entire kernel from disk? Where does it find this information?
 Ans: It finds the information from ELF header, whose address is pre-defined in physical memory.
+e.g., objdump -x obj/kern/kernel
 
 Exercise 5
 Trace through the first few instructions of the boot loader again and identify the first instruction that would "break" or otherwise do the wrong thing if you were to get the boot loader's link address wrong. Then change the link address in boot/Makefrag to something wrong, run make clean, recompile the lab with make, and trace into the boot loader again to see what happens. Don't forget to change the link address back and make clean again afterward!
-Ans: I changed the link address to several options such as 0x7c08, 0x7d00. What I find out is that the bootloader still executes from address 0x7c00 (maybe because of the mapping in physical memory from 0x7c00 to 0x7cff for boot loader). When I step thru the instruction, it finally breaks at the long jump when the boot mode switches from protected mode to 32-bit mode. As indicated in below instruction.
+Ans: I changed the link address to several options such as 0x7c08, 0x7d00. What I find out is that the bootloader still executes from address 0x7c00 (maybe because of the mapping in physical memory from 0x7c00 to 0x7dff for boot loader). When I step thru the instruction, it finally breaks at the long jump when the boot mode switches from protected mode to 32-bit mode. As indicated in below instruction.
 [   0:7c2d] => 0x7c2d:  ljmp   $0x8,$0x7c32
 
 Exercise 6
@@ -29,7 +30,7 @@ When BIOS enters the boot loader:
 When boot loader enters the kernel:
 0x100000:       0x1badb002      0x00000000      0xe4524ffe      0x7205c766
 0x100010:       0x34000004      0x6000b812      0x220f0011      0xc0200fd8
-The difference in contents is because kernel is loaded to memory by boot loader.
+The difference in contents is because kernel is loaded to memory by boot loader, and it should be the ELF header information starting at addr 0x10000.
 ph->p_pa field records the load address of each section in kernel ELF object. Boot loader loads each section of kernel to its own load address.
 ->Examine the full list of the names, sizes, and link addresses of all the sections in the kernel executable by typing:
 i386-jos-elf-objdump -h obj/kern/kernel
