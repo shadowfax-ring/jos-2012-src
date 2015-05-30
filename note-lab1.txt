@@ -69,3 +69,7 @@ ctl+a c - to switch to monitor mode
 [0008:7d63] - last instruction address of boot loader
 [0008:10000c] - first instruction address of kernel
 
+4. cprintf mechanism for kernel
+code path: cprintf()->vcprintf()->vprintfmt()->putch()->cputchar()
+->cons_putc()->serial_putc()/lpt_putc()/cga_putc()
+

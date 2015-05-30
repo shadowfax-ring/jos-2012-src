@@ -69,6 +69,21 @@ After:
 0xf0100000:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
 0xf0100010:     0xffffffff      0xffffffff      0xffffffff      0xffffffff
 
+Exercise 8-1
+Explain the interface between printf.c and console.c. Specifically, what function does console.c export? How is this function used by printf.c?
+Ans: Console.c mainly provides I/O interfaces directly with hardware such as serial, VGA or CGA. It exports cputchar(), which is used by putch() in printf.c.
+
+Exercise 8-2
+Explain the following from console.c:
+1      if (crt_pos >= CRT_SIZE) {
+2              int i;
+3              memcpy(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
+4              for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
+5                      crt_buf[i] = 0x0700 | ' ';
+6              crt_pos -= CRT_COLS;
+7      }
+Ans: It check if the console is full. If it is, then slide the text up one line(eliminate the first line), and put the cursor at the first character of last line.
+
 Exercise 8-3
 For the following questions you might wish to consult the notes for Lecture 2. These notes cover GCC's calling convention on the x86.
 Trace the execution of the following code step-by-step:
@@ -76,7 +91,7 @@ int x = 1, y = 3, z = 4;
 cprintf("x %d, y %x, z %d\n", x, y, z);
 In the call to cprintf(), to what does fmt point? To what does ap point?
 List (in order of execution) each call to cons_putc, va_arg, and vcprintf. For cons_putc, list its argument as well. For va_arg, list what ap points to before and after the call. For vcprintf list the values of its two arguments.
-Ans: In the call to cprintf, fmt points to the immediate 0xf0101852. ap points to the pointer to first argument: 0x1, whose addr/val is 0xf0115fc4.
+Ans: In the call to cprintf, fmt points to the immediate 0xf0101852(pointer to formatted string). ap points to the pointer to first argument: 0x1, whose addr/val is 0xf0115fc4.
 In vcprintf, value of fmt is 0xf0101852, and value of ap is 0xf0115fc4.
 cprintf(fmt, ...) -> vcprintf(fmt, ap) -> vprintfmt((void*)putch, &cnt, fmt, ap)
 Skip rest of questions since I am already faimiliar with x86 call convention.
@@ -88,11 +103,17 @@ Run the following code.
 What is the output? Explain how this output is arrived at in the step-by-step manner of the previous exercise. Here's an ASCII table that maps bytes to characters.
 The output depends on that fact that the x86 is little-endian. If the x86 were instead big-endian what would you set i to in order to yield the same output? Would you need to change 57616 to a different value?
 Ans: Big Endian - Least Significant Byte stored in Highest address; Little Endian - Least Significant Byte stored at Lowest address.
+For big endian machine, we don't need to change 57616(an integer), as the way it prints is unrelated to how it stores in memory.
+However, we need to revert the byte ordering of integer i, as it is printed as a c string from address of lower byte to higher byte. {0x72, 0x6c, 0x64, 0x00} = {'r', 'l', 'd', '\0'} We should change unsigned int i = 0x726c6400;
 
 Exercise 8-5
 In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?
     cprintf("x=%d y=%d", 3);
 Ans: y could be any value on the stack. This happens because vprintfmt will finally locate a value according to y by moving the dereferencing $ebp ptr up from the position of value x.
+
+Exercise 8-6
+Let's say that GCC changed its calling convention so that it pushed arguments on the stack in declaration order, so that the last argument is pushed last. How would you have to change cprintf or its interface so that it would still be possible to pass it a variable number of arguments?
+Ans: In this case, we need to change macro for va_XXX to read arguments from the right to left instead.
 
 Exercise 10. 
 To become familiar with the C calling conventions on the x86, find the address of the test_backtrace function in obj/kern/kernel.asm, set a breakpoint there, and examine what happens each time it gets called after the kernel starts. How many 32-bit words does each recursive nesting level of test_backtrace push on the stack, and what are those words?
